@@ -1,17 +1,30 @@
-# plansync
+# PlanSync
 
-A new Flutter project.
+A trip planner that keeps everything for a journey in one place — a day-by-day
+itinerary, places, expenses and attachments — with flight lookup, sharing and
+PDF export.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Trips & itineraries** — organise plans by day
+- **Places** — search and pin locations to items
+- **Expenses** — track spend by category
+- **Attachments** — files and docs per trip
+- **Flight lookup** — pull flight details
+- **Live Activity** — trip status on the lock screen (iOS)
+- **Share & export** — share an itinerary or export it to PDF
+- **Offline aware** with local notifications
 
-A few resources to get you started if this is your first Flutter project:
+## Tech
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Flutter** (Dart)
+- Models/controllers/services split under `lib/`; UI in `lib/ui/`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run
+
+```bash
+flutter pub get
+flutter run
+```
+
+Lint with `flutter analyze`, test with `flutter test`.
