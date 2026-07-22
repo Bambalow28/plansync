@@ -6,22 +6,26 @@ import 'controllers/trip_controller.dart';
 import 'models/trip.dart';
 import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
+import 'services/onboarding_service.dart';
 import 'services/trip_link.dart';
 import 'theme/app_theme.dart';
 import 'ui/home/home_screen.dart';
+import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/trip/trip_detail_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Let the status bar blend into the app's dark header: transparent
   // background with light (white) icons, plus a matching nav bar.
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: AppColors.background,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: AppColors.background,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
   await TripController.instance.load();
   // Set up local notifications, then schedule reminders for existing plans.
   await NotificationService.instance.init();
@@ -51,6 +55,13 @@ class _PlanSyncAppState extends State<PlanSyncApp> {
     _linkSub = _appLinks.uriLinkStream.listen(_onUri);
     _appLinks.getInitialLink().then((u) {
       if (u != null) _onUri(u);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!await OnboardingService.instance.hasSeenOnboarding()) {
+        _navKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+      }
     });
   }
 
@@ -82,11 +93,17 @@ class _PlanSyncAppState extends State<PlanSyncApp> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: AppText.body(14, color: AppColors.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: AppText.body(14, color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Add trip', style: AppText.body(14, color: AppColors.accent)),
+            child: Text(
+              'Add trip',
+              style: AppText.body(14, color: AppColors.accent),
+            ),
           ),
         ],
       ),

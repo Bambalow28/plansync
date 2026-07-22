@@ -62,3 +62,22 @@ requested.
 - Format: `dart format`.
 - Deps: edit `pubspec.yaml`, then `flutter pub get` — prefer packages already in
   `pubspec.lock` over adding new ones.
+
+## Builds / CI
+
+When the user says "let's do a build" (or equivalent), after finishing the task
+at hand: make sure this project's self-hosted GitHub Actions runner is online
+before pushing to `main` — that push is what triggers
+`.github/workflows/testflight.yml`. Check status, and start it if offline:
+
+```
+gh api repos/Bambalow28/plansync/actions/runners --jq '.runners[] | {name,status}'
+cd ~/actions-runner-plansync && nohup ./run.sh > run.log 2>&1 & disown
+```
+
+Once the triggered workflow run finishes (`gh run list --branch main --limit 1`
+shows `completed`), stop the runner rather than leaving it listening:
+
+```
+pkill -f 'actions-runner-plansync/bin/Runner.Listener'
+```

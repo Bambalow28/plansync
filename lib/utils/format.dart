@@ -50,6 +50,15 @@ String shortRange(DateTime a, DateTime b) {
   return '${DateFormat('MMM d').format(a)} – ${DateFormat('MMM d').format(b)}';
 }
 
+/// Same as [shortRange] but always includes the year.
+String shortRangeWithYear(DateTime a, DateTime b) {
+  final sameMonth = a.month == b.month && a.year == b.year;
+  if (sameMonth) {
+    return '${DateFormat('MMM d').format(a)} – ${DateFormat('d, yyyy').format(b)}';
+  }
+  return '${DateFormat('MMM d, yyyy').format(a)} – ${DateFormat('MMM d, yyyy').format(b)}';
+}
+
 /// A country's flag emoji from its 2-letter ISO code (e.g. "JP" → 🇯🇵).
 /// Returns '' for an empty/invalid code.
 String flagEmoji(String countryCode) {

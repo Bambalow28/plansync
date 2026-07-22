@@ -127,6 +127,20 @@ class TripController extends ChangeNotifier {
     await _persist();
   }
 
+  /// Same as [addItem] for a batch (e.g. an AI-drafted itinerary) — one
+  /// persist for the whole set instead of one per item.
+  Future<void> addItems(
+    String tripId,
+    List<ItineraryItem Function(String id)> builders,
+  ) async {
+    final trip = tripById(tripId);
+    if (trip == null || builders.isEmpty) return;
+    for (final build in builders) {
+      trip.items.add(build(_newId()));
+    }
+    await _persist();
+  }
+
   Future<void> updateItem(String tripId) async => _persist();
 
   Future<void> deleteItem(String tripId, String itemId) async {

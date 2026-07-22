@@ -14,12 +14,14 @@ jobs:
       - name: Build IPA
         env:
           AERODATABOX_API_KEY: ${{ secrets.AERODATABOX_API_KEY }}
+          MAPBOX_API_KEY: ${{ secrets.MAPBOX_API_KEY }}
         run: >
           flutter build ipa
           --release
           --build-number=$GITHUB_RUN_NUMBER
           --export-options-plist=ios/ExportOptions.plist
           --dart-define=AERODATABOX_API_KEY=$AERODATABOX_API_KEY
+          --dart-define=MAPBOX_API_KEY=$MAPBOX_API_KEY
       - name: Upload to TestFlight
         working-directory: ios
         env:

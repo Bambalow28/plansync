@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import '../../controllers/trip_controller.dart';
 import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
-import '../shared/add_trip_sheet.dart';
+import '../shared/create_choice_sheet.dart';
 import '../trip/trip_detail_screen.dart';
 import 'widgets/trip_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  Widget _dismissibleCard(BuildContext context, Trip trip, {bool dimmed = false}) {
+  Widget _dismissibleCard(
+    BuildContext context,
+    Trip trip, {
+    bool dimmed = false,
+  }) {
     return Dismissible(
       key: ValueKey(trip.id),
       direction: DismissDirection.endToStart,
@@ -48,11 +52,17 @@ class HomeScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: AppText.body(14, color: AppColors.textSecondary)),
+            child: Text(
+              'Cancel',
+              style: AppText.body(14, color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete', style: AppText.body(14, color: AppColors.warning)),
+            child: Text(
+              'Delete',
+              style: AppText.body(14, color: AppColors.warning),
+            ),
           ),
         ],
       ),
@@ -65,7 +75,7 @@ class HomeScreen extends StatelessWidget {
     final controller = TripController.instance;
     return Scaffold(
       floatingActionButton: _NewTripButton(
-        onTap: () => AddTripSheet.show(context),
+        onTap: () => CreateChoiceSheet.show(context),
       ),
       body: SafeArea(
         bottom: false,
@@ -75,9 +85,19 @@ class HomeScreen extends StatelessWidget {
             final trips = controller.trips;
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
-            bool isPast(t) => DateTime(t.endDate.year, t.endDate.month, t.endDate.day).isBefore(today);
-            final active = [for (final t in trips) if (!isPast(t)) t];
-            final past = [for (final t in trips) if (isPast(t)) t];
+            bool isPast(t) => DateTime(
+              t.endDate.year,
+              t.endDate.month,
+              t.endDate.day,
+            ).isBefore(today);
+            final active = [
+              for (final t in trips)
+                if (!isPast(t)) t,
+            ];
+            final past = [
+              for (final t in trips)
+                if (isPast(t)) t,
+            ];
 
             return CustomScrollView(
               slivers: [
@@ -89,18 +109,27 @@ class HomeScreen extends StatelessWidget {
                   )
                 else ...[
                   SliverPadding(
-                    padding: EdgeInsets.fromLTRB(20, 8, 20, past.isEmpty ? 120 : 8),
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      8,
+                      20,
+                      past.isEmpty ? 120 : 8,
+                    ),
                     sliver: SliverList.separated(
                       itemCount: active.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 16),
-                      itemBuilder: (context, i) => _dismissibleCard(context, active[i]),
+                      itemBuilder: (context, i) =>
+                          _dismissibleCard(context, active[i]),
                     ),
                   ),
                   if (past.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(24, 12, 20, 10),
-                        child: Text('PAST TRIPS', style: AppText.label(11, color: AppColors.textMuted)),
+                        child: Text(
+                          'PAST TRIPS',
+                          style: AppText.label(11, color: AppColors.textMuted),
+                        ),
                       ),
                     ),
                     SliverPadding(
@@ -108,7 +137,8 @@ class HomeScreen extends StatelessWidget {
                       sliver: SliverList.separated(
                         itemCount: past.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 16),
-                        itemBuilder: (context, i) => _dismissibleCard(context, past[i], dimmed: true),
+                        itemBuilder: (context, i) =>
+                            _dismissibleCard(context, past[i], dimmed: true),
                       ),
                     ),
                   ],

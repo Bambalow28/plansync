@@ -4,21 +4,19 @@ import '../../models/place.dart';
 import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
+import 'date_range_dialog.dart';
 import 'money_field.dart';
 import 'place_search_field.dart';
-import 'sheet_scaffold.dart';
 
-/// Bottom sheet to create a new trip or edit an existing one.
+/// Full page to create a new trip or edit an existing one.
 class AddTripSheet extends StatefulWidget {
   final Trip? existing;
   const AddTripSheet({super.key, this.existing});
 
   static Future<void> show(BuildContext context, {Trip? existing}) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AddTripSheet(existing: existing),
+    return Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => AddTripSheet(existing: existing)),
     );
   }
 
@@ -79,24 +77,12 @@ class _AddTripSheetState extends State<AddTripSheet> {
   }
 
   Future<void> _pickDates() async {
-    final range = await showDateRangePicker(
+    final range = await showAppDateRangeDialog(
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
-      initialDateRange: _start != null && _end != null
-          ? DateTimeRange(start: _start!, end: _end!)
-          : null,
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.dark(
-            primary: AppColors.accent,
-            onPrimary: Colors.black,
-            surface: AppColors.surfaceHigh,
-            onSurface: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
+      initialStart: _start,
+      initialEnd: _end,
     );
     if (range != null) {
       setState(() {
@@ -162,11 +148,30 @@ class _AddTripSheetState extends State<AddTripSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SheetScaffold(
-      title: widget.existing == null ? 'New Trip' : 'Edit Trip',
-      onSave: (_valid && (widget.existing == null || _dirty)) ? _save : null,
-      children: [
-        _Field(label: 'Trip name', controller: _name, hint: 'Japan 2026'),
+    final canSave = _valid && (widget.existing == null || _dirty);
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        title: Text(
+          widget.existing == null ? 'New Trip' : 'Edit Trip',
+          style: AppText.display(20),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Field(
+                      label: 'Trip name',
+                      controller: _name,
+                      hint: 'Japan 2026',
+                    ),
         const SizedBox(height: 16),
         Text('DESTINATION', style: AppText.label(10)),
         const SizedBox(height: 8),
@@ -232,7 +237,43 @@ class _AddTripSheetState extends State<AddTripSheet> {
             );
           }).toList(),
         ),
-      ],
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                4,
+                24,
+                12 + MediaQuery.of(context).padding.bottom,
+              ),
+              child: GestureDetector(
+                onTap: canSave ? _save : null,
+                child: Opacity(
+                  opacity: canSave ? 1 : 0.4,
+                  child: Container(
+                    height: 54,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.accentGradient,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      widget.existing == null ? 'Save' : 'Save changes',
+                      style: AppText.body(
+                        16,
+                        color: Colors.black,
+                        weight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

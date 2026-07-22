@@ -7,6 +7,10 @@ import '../../theme/app_theme.dart';
 /// A location field that shows a debounced dropdown of real cities from the
 /// offline dataset. A place is only "chosen" once the user taps a suggestion;
 /// editing the text clears the selection so callers can require a valid place.
+///
+/// The dropdown floats over the page (an [OverlayPortal] anchored to the
+/// field via [CompositedTransformTarget]/[CompositedTransformFollower])
+/// instead of pushing the rest of the layout down.
 class PlaceSearchField extends StatefulWidget {
   final Place? initialValue;
   final ValueChanged<Place?> onSelected;
@@ -15,6 +19,7 @@ class PlaceSearchField extends StatefulWidget {
   // a suggestion for — commit whatever was typed on blur instead of requiring
   // a dropdown match.
   final bool allowFreeText;
+  final bool autofocus;
 
   const PlaceSearchField({
     super.key,
@@ -22,16 +27,22 @@ class PlaceSearchField extends StatefulWidget {
     this.initialValue,
     this.hint = 'Search city — e.g. Tokyo',
     this.allowFreeText = false,
+    this.autofocus = false,
   });
 
   @override
   State<PlaceSearchField> createState() => _PlaceSearchFieldState();
 }
 
+/// Show at most this many suggestions in the dropdown.
+const _kMaxSuggestions = 3;
+
 class _PlaceSearchFieldState extends State<PlaceSearchField> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialValue?.label ?? '');
   final _focusNode = FocusNode();
+  final _link = LayerLink();
+  final _overlayController = OverlayPortalController();
   Timer? _debounce;
 
   List<Place> _suggestions = const [];
@@ -104,7 +115,7 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
     final results = await PlaceSearchService.instance.search(value);
     if (!mounted || seq != _seq) return;
     setState(() {
-      _suggestions = results;
+      _suggestions = results.take(_kMaxSuggestions).toList();
       _loading = false;
     });
   }
@@ -126,73 +137,128 @@ class _PlaceSearchFieldState extends State<PlaceSearchField> {
   @override
   Widget build(BuildContext context) {
     final hasQuery = _controller.text.trim().length >= 2;
-    final showList = _focusNode.hasFocus && _selected == null && (_suggestions.isNotEmpty || (_loading && hasQuery));
+    final noMatch = _focusNode.hasFocus && _selected == null && !_loading && _suggestions.isEmpty && hasQuery;
+    final showOverlay =
+        _focusNode.hasFocus && _selected == null && (_suggestions.isNotEmpty || (_loading && hasQuery) || noMatch);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          onChanged: _onChanged,
-          onTap: () => setState(() {}),
-          textCapitalization: TextCapitalization.words,
-          style: AppText.body(15),
-          cursorColor: AppColors.accent,
-          decoration: InputDecoration(
-            isDense: true,
-            hintText: widget.hint,
-            hintStyle: AppText.body(15, color: AppColors.textMuted),
-            prefixIcon: Icon(Icons.location_on_outlined, size: 18, color: AppColors.textMuted),
-            suffixIcon: _selected != null
-                ? Icon(Icons.check_circle_rounded, size: 18, color: AppColors.accent)
-                : (_loading
-                    ? const Padding(
-                        padding: EdgeInsets.all(14),
-                        child: SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
-                        ),
-                      )
-                    : null),
-            filled: true,
-            fillColor: AppColors.surfaceLow,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            enabledBorder: _border(Colors.white.withValues(alpha: 0.06)),
-            focusedBorder: _border(AppColors.accent),
-          ),
-        ),
-        if (showList)
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceLow,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+    // Deferred a frame: toggling the controller synchronously during build
+    // can fire before the OverlayPortal below has actually mounted, which
+    // trips an internal Flutter assertion (_zOrderIndex != null).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (showOverlay) {
+        _overlayController.show();
+      } else {
+        _overlayController.hide();
+      }
+    });
+
+    return CompositedTransformTarget(
+      link: _link,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return OverlayPortal(
+            controller: _overlayController,
+            overlayChildBuilder: (context) => CompositedTransformFollower(
+              link: _link,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.bottomLeft,
+              followerAnchor: Alignment.topLeft,
+              offset: const Offset(0, 6),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: _Dropdown(loading: _loading, suggestions: _suggestions, noMatch: noMatch, onSelect: _select),
+                ),
+              ),
             ),
-            child: _loading && _suggestions.isEmpty
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              autofocus: widget.autofocus,
+              onChanged: _onChanged,
+              onTap: () => setState(() {}),
+              textCapitalization: TextCapitalization.words,
+              style: AppText.body(15),
+              cursorColor: AppColors.accent,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: widget.hint,
+                hintStyle: AppText.body(15, color: AppColors.textMuted),
+                prefixIcon: Icon(Icons.location_on_outlined, size: 18, color: AppColors.textMuted),
+                suffixIcon: _selected != null
+                    ? Icon(Icons.check_circle_rounded, size: 18, color: AppColors.accent)
+                    : (_loading
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                            ),
+                          )
+                        : null),
+                filled: true,
+                fillColor: AppColors.surfaceLow,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                enabledBorder: _border(Colors.white.withValues(alpha: 0.06)),
+                focusedBorder: _border(AppColors.accent),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The floating suggestion panel itself.
+class _Dropdown extends StatelessWidget {
+  final bool loading;
+  final List<Place> suggestions;
+  final bool noMatch;
+  final ValueChanged<Place> onSelect;
+  const _Dropdown({
+    required this.loading,
+    required this.suggestions,
+    required this.noMatch,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLow,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
+        child: loading && suggestions.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: Text('Searching…', style: AppText.label(12, color: AppColors.textSecondary))),
+              )
+            : noMatch
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: Text('Searching…', style: AppText.label(12, color: AppColors.textSecondary))),
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+                    child: Text('No matching city found', style: AppText.label(11, color: AppColors.textSecondary)),
                   )
                 : Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (var i = 0; i < _suggestions.length; i++)
+                      for (var i = 0; i < suggestions.length; i++)
                         _SuggestionTile(
-                          place: _suggestions[i],
-                          showDivider: i != _suggestions.length - 1,
-                          onTap: () => _select(_suggestions[i]),
+                          place: suggestions[i],
+                          showDivider: i != suggestions.length - 1,
+                          onTap: () => onSelect(suggestions[i]),
                         ),
                     ],
                   ),
-          ),
-        if (_focusNode.hasFocus && _selected == null && !_loading && _suggestions.isEmpty && hasQuery)
-          Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4),
-            child: Text('No matching city found', style: AppText.label(11, color: AppColors.textSecondary)),
-          ),
-      ],
+      ),
     );
   }
 }
