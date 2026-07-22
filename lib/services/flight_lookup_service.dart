@@ -45,12 +45,16 @@ class FlightLookupService {
   FlightLookupService._();
   static final FlightLookupService instance = FlightLookupService._();
 
-  // Personal AeroDataBox (RapidAPI) access key.
-  static const String _rapidApiKey =
-      '308e8a5531msha94fa3985504da4p16ddc1jsn3a9b8cd584a5';
+  // Injected at build time via --dart-define=AERODATABOX_API_KEY=... (see
+  // .github/workflows/testflight.yml); empty for local `flutter run`/`flutter
+  // test`, which just makes lookups fail soft to manual entry.
+  static const String _rapidApiKey = String.fromEnvironment(
+    'AERODATABOX_API_KEY',
+  );
   static const String _host = 'aerodatabox.p.rapidapi.com';
 
   Future<FlightInfo?> lookup(String rawCode, {DateTime? day}) async {
+    if (_rapidApiKey.isEmpty) return null;
     final code = rawCode.toUpperCase().replaceAll(RegExp(r'\s+'), '');
     if (code.isEmpty) return null;
 

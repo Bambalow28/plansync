@@ -1,0 +1,21 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload the already-built IPA to TestFlight"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_API_KEY_P8"],
+    )
+    # Flutter names the IPA after the app (e.g. Runner.ipa), so glob it.
+    # Anchor on GITHUB_WORKSPACE in CI; fall back to repo root for local runs.
+    root = ENV["GITHUB_WORKSPACE"] || ".."
+    ipa_path = Dir[File.join(root, "build/ios/ipa/*.ipa")].first
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end
