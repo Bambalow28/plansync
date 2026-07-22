@@ -70,20 +70,20 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
 
 SPEC CHECKSUMS:
-  app_links: 6d01271b3907b0ee7325c5297c75d697c4226c4d
-  connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
-  file_selector_ios: 80c12e90ad3f2045ed6819d03742f1a4c5ec3f93
+  app_links: a754cbec3c255bd4bbb4d236ecc06f28cd9a7ce8
+  connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
+  file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_app_group_directory: d2c3337f424828558953172f9378d00df9b7756d
-  flutter_local_notifications: eda81afddbf18f8589f6ec069ce593c4c6378769
-  flutter_timezone: ffb07bdad3c6276af8dada0f11978d8a1f8a20bb
-  live_activities: 5a5313d5bf801bbbbe80d51eab80aed6d6df376b
-  open_filex: 6e26e659846ec990262224a12ef1c528bb4edbe4
-  pdfx: 7b876b09de8b7a0bf444a4f82b439ffcff4ee1ec
-  permission_handler_apple: ee2fe0fd04551b304eb002714ff067c371c822ed
-  share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
-  shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
+  flutter_app_group_directory: 55b5362007d1c0cb45dc1dd1e94f67d615f45a6b
+  flutter_local_notifications: 643a3eda1ce1c0599413ca31672536d423dee214
+  flutter_timezone: ee50ce7786b5fde27e2fe5375bbc8c9661ffc13f
+  live_activities: 4dfa736d0736e1c77866a2f9c056a76513cc9e7b
+  open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
+  pdfx: 77f4dddc48361fbb01486fa2bdee4532cbb97ef3
+  permission_handler_apple: 92d754bbaa7361d436db2d6c3c1c2a0fdcec462e
+  share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

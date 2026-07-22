@@ -101,7 +101,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
   /// True while a picked document is being copied into app storage.
   bool _uploading = false;
 
-  /// True while an AviationStack flight lookup is in flight.
+  /// True while an AeroDataBox flight lookup is in flight.
   bool _lookingUp = false;
 
   @override
@@ -896,7 +896,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
   }
 
   /// Flight-number field with an "Auto-fill" action that looks the flight up on
-  /// AviationStack and populates the route, airport codes, and times.
+  /// AeroDataBox and populates the route, airport codes, and times.
   Widget _flightNumberField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -964,7 +964,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
         const SizedBox(height: 6),
         Text(
           _online
-              ? 'Auto-fill pulls live flight data — best for flights operating today. Otherwise use Manual.'
+              ? 'Auto-fill pulls the scheduled flight for this trip day. Otherwise use Manual.'
               : 'Offline — connect to look up a flight, or switch to Manual.',
           style: AppText.body(11, color: AppColors.textMuted),
         ),
@@ -979,14 +979,11 @@ class _AddItemSheetState extends State<AddItemSheet> {
       return;
     }
     setState(() => _lookingUp = true);
-    // Note: the free AviationStack tier is live-only (a flight_date filter is a
-    // paid feature that errors out), so we don't pass the trip day — we look up
-    // the flight as it operates today.
-    final info = await FlightLookupService.instance.lookup(code);
+    final info = await FlightLookupService.instance.lookup(code, day: widget.day);
     if (!mounted) return;
     if (info == null) {
       setState(() => _lookingUp = false);
-      _snack('No live data for $code today — enter the details manually');
+      _snack('No schedule found for $code — enter the details manually');
       return;
     }
     setState(() {

@@ -4,13 +4,6 @@ Standalone Flutter app (unrelated to the sibling projects).
 
 Layout: Dart, `pubspec.yaml`, `lib/`, `test/`.
 
-## Starting a task (READ FIRST)
-
-**Do not start any new task until the user sends the filled-in task template.**
-If the user describes work without it, ask for the completed template and wait —
-no planning, no code, no branch until it arrives. (Quick questions and follow-ups
-on work already in progress don't need a new template.)
-
 ## No narration before output (READ FIRST)
 
 **Do not explain, narrate, or think out loud before making changes.** No

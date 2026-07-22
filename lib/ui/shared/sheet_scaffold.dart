@@ -42,6 +42,7 @@ class SheetScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
@@ -50,7 +51,13 @@ class SheetScaffold extends StatelessWidget {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          // Shrink by the keyboard height too, so a focused field's own
+          // auto-scroll (Scrollable.ensureVisible) brings it just above the
+          // keyboard instead of the whole sheet jumping/overflowing upward.
+          maxHeight: (screenHeight * 0.9 - bottomInset).clamp(
+            0.0,
+            screenHeight * 0.9,
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
