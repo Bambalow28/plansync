@@ -11,6 +11,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: flutter pub get
+      - name: Import signing certificate
+        env:
+          DIST_CERT_P12_BASE64: ${{ secrets.DIST_CERT_P12_BASE64 }}
+          DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
+        run: |
+          # Sign with a fixed, pre-created distribution cert imported into a
+          # throwaway keychain. This stops Xcode from minting — and, at the
+          # 2-cert cap, revoking — the shared distribution cert, which is what
+          # expired every app's TestFlight builds on 2026-07-23. With the cert
+          # present, automatic signing reuses it instead of creating a new one.
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_pw="$(uuidgen)"
+          cert="$RUNNER_TEMP/dist.p12"
+          printf '%s' "$DIST_CERT_P12_BASE64" | base64 --decode > "$cert"
+          security create-keychain -p "$keychain_pw" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_pw" "$keychain"
+          security import "$cert" -k "$keychain" -P "$DIST_CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/xcodebuild
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_pw" "$keychain" >/dev/null
+          # Prepend our keychain to the search list so automatic signing finds
+          # the identity regardless of who started the runner; restored on exit.
+          security list-keychains -d user | tr -d '"' > "$RUNNER_TEMP/keychains.orig"
+          security list-keychains -d user -s "$keychain" $(cat "$RUNNER_TEMP/keychains.orig")
+          rm -f "$cert"
       - name: Build IPA
         env:
           AERODATABOX_API_KEY: ${{ secrets.AERODATABOX_API_KEY }}
@@ -28,3 +53,8 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: bundle exec fastlane beta
+      - name: Remove signing keychain
+        if: always()
+        run: |
+          [ -f "$RUNNER_TEMP/keychains.orig" ] && security list-keychains -d user -s $(cat "$RUNNER_TEMP/keychains.orig") || true
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
