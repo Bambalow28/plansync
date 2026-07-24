@@ -46,6 +46,27 @@ jobs:
           --export-options-plist=ios/ExportOptions.plist
           --dart-define=AERODATABOX_API_KEY=$AERODATABOX_API_KEY
           --dart-define=MAPBOX_API_KEY=$MAPBOX_API_KEY
+      - name: Verify signing (debug)
+        run: |
+          # Fail loudly if the archive isn't signed by an Apple *Distribution*
+          # identity with an App Store profile — a Development/ad-hoc signature
+          # uploads and shows in TestFlight but can't be installed by testers.
+          app=$(ls -d build/ios/archive/Runner.xcarchive/Products/Applications/*.app 2>/dev/null | head -1)
+          echo "app: ${app:-NONE}"; test -n "$app"
+          echo "--- codesign authority ---"
+          codesign -dvvv "$app" 2>&1 | grep -Ei 'Authority|TeamIdentifier' | head
+          auth=$(codesign -dvvv "$app" 2>&1 | grep -m1 'Authority=' | sed 's/Authority=//')
+          echo "signing identity: $auth"
+          prof="$app/embedded.mobileprovision"
+          security cms -D -i "$prof" 2>/dev/null > /tmp/prof.plist
+          echo -n "profile name: "; /usr/libexec/PlistBuddy -c 'Print :Name' /tmp/prof.plist 2>/dev/null
+          gta=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' /tmp/prof.plist 2>/dev/null)
+          adhoc=$(/usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices' /tmp/prof.plist >/dev/null 2>&1 && echo yes || echo no)
+          echo "get-task-allow: $gta   has-ProvisionedDevices(dev/adhoc): $adhoc"
+          case "$auth" in
+            *Distribution*) echo "✅ distribution-signed" ;;
+            *) echo "::error::NOT distribution-signed ($auth) — testers cannot install"; exit 1 ;;
+          esac
       - name: Upload to TestFlight
         working-directory: ios
         env:
