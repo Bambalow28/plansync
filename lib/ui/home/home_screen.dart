@@ -3,7 +3,7 @@ import '../../controllers/trip_controller.dart';
 import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
 import '../shared/create_choice_sheet.dart';
-import '../trip/trip_detail_screen.dart';
+import '../trip/trip_review_screen.dart';
 import 'widgets/trip_card.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -33,7 +33,7 @@ class HomeScreen extends StatelessWidget {
         dimmed: dimmed,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => TripDetailScreen(tripId: trip.id)),
+          MaterialPageRoute(builder: (_) => TripReviewScreen(tripId: trip.id)),
         ),
       ),
     );

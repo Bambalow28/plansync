@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../models/category.dart';
 import '../../../models/itinerary_item.dart';
@@ -42,16 +43,40 @@ class _TimelineViewState extends State<TimelineView> with SingleTickerProviderSt
     duration: const Duration(milliseconds: 700),
   )..forward();
 
+  // Ticks the "now" line forward while today's timeline is on screen; only
+  // runs when it's actually needed (not on past/future days).
+  Timer? _nowTimer;
+
+  bool _isToday(DateTime d) {
+    final n = DateTime.now();
+    return d.year == n.year && d.month == n.month && d.day == n.day;
+  }
+
+  void _syncNowTimer() {
+    final needed = _isToday(widget.day);
+    if (needed == (_nowTimer != null)) return;
+    _nowTimer?.cancel();
+    _nowTimer = needed ? Timer.periodic(const Duration(seconds: 60), (_) => setState(() {})) : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _syncNowTimer();
+  }
+
   @override
   void didUpdateWidget(TimelineView old) {
     super.didUpdateWidget(old);
     // Replay the reveal when switching to a different day.
     if (old.day != widget.day) _intro.forward(from: 0);
+    _syncNowTimer();
   }
 
   @override
   void dispose() {
     _intro.dispose();
+    _nowTimer?.cancel();
     super.dispose();
   }
 
@@ -256,6 +281,21 @@ class _TimelineViewState extends State<TimelineView> with SingleTickerProviderSt
       content: const _BookendContent(label: 'END OF DAY', time: '11:59 PM'),
       nodeColor: AppColors.accent,
     ));
+
+    // A trip in progress gets a live marker at the current moment — purely a
+    // visual overlay row, not a real plan, so it never affects the
+    // spine/container/branch math above.
+    if (_isToday(day)) {
+      final nowClamped = now.isBefore(ds) ? ds : (now.isAfter(de) ? de : now);
+      anchors.add(_Anchor(
+        time: nowClamped,
+        order: 2,
+        gutter: const SizedBox.shrink(),
+        content: _NowContent(time: timeLabel(nowClamped.hour * 60 + nowClamped.minute)),
+        nodeColor: AppColors.warning,
+        filled: true,
+      ));
+    }
 
     anchors.sort((a, b) {
       final c = a.time.compareTo(b.time);
@@ -547,6 +587,27 @@ class _BookendContent extends StatelessWidget {
           Text(label, style: AppText.label(10, color: AppColors.accent, tracking: 1.5)),
           const SizedBox(height: 2),
           Text(time, style: AppText.label(11, color: AppColors.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Live marker for the current moment on today's rail — a warning-colored
+/// line running into the content column with a small "NOW" label.
+class _NowContent extends StatelessWidget {
+  final String time;
+  const _NowContent({required this.time});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(child: Container(height: 1, color: AppColors.warning.withValues(alpha: 0.65))),
+          const SizedBox(width: 8),
+          Text('NOW · $time', style: AppText.label(10, color: AppColors.warning, tracking: 0.8)),
         ],
       ),
     );

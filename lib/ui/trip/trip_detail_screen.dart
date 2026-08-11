@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../controllers/trip_controller.dart';
-import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
-import '../../utils/format.dart';
-import '../../services/itinerary_share.dart';
-import '../../services/trip_link.dart';
 import '../shared/add_item_sheet.dart';
-import '../shared/add_trip_sheet.dart';
 import 'widgets/budget_summary.dart';
 import 'widgets/day_selector.dart';
 import 'widgets/plan_details_dialog.dart';
@@ -15,7 +9,13 @@ import 'widgets/timeline_view.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final String tripId;
-  const TripDetailScreen({super.key, required this.tripId});
+
+  /// Which day to open on. Defaults to today (if the trip is in progress)
+  /// when omitted — set by [TripReviewScreen] when drilling into a specific
+  /// day from the trip-level summary.
+  final int? initialDayIndex;
+
+  const TripDetailScreen({super.key, required this.tripId, this.initialDayIndex});
 
   @override
   State<TripDetailScreen> createState() => _TripDetailScreenState();
@@ -34,6 +34,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDayIndex != null) {
+      _dayIndex = widget.initialDayIndex!;
+      return;
+    }
     // Default to today if the trip is in progress.
     final trip = TripController.instance.tripById(widget.tripId);
     if (trip != null) {
@@ -51,34 +55,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       setState(() => _dayIndex = clamped);
       // Switching days resets the page to the top of the timeline.
       if (_scrollController.hasClients) _scrollController.jumpTo(0);
-    }
-  }
-
-  Future<void> _confirmDelete(Trip trip) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: Text('Delete trip?', style: AppText.display(20)),
-        content: Text(
-          '“${trip.name}” and all its plans will be removed.',
-          style: AppText.body(14, color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: AppText.body(14, color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete', style: AppText.body(14, color: AppColors.warning)),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await TripController.instance.deleteTrip(trip.id);
-      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -102,11 +78,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
           body: Column(
             children: [
-              _TopBar(
-                trip: trip,
-                onEdit: () => AddTripSheet.show(context, existing: trip),
-                onDelete: () => _confirmDelete(trip),
-              ),
+              _DayTopBar(tripName: trip.name),
               // The whole page below the top bar scrolls together; a horizontal
               // swipe moves to the previous/next day.
               Expanded(
@@ -174,123 +146,29 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  final Trip trip;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  const _TopBar({required this.trip, required this.onEdit, required this.onDelete});
-
-  Future<void> _shareItinerary(BuildContext context) async {
-    // Anchor the share sheet (needed on iPad). Fall back to copying the text if
-    // the share sheet can't be presented for any reason.
-    final box = context.findRenderObject() as RenderBox?;
-    final origin = (box != null && box.hasSize)
-        ? box.localToGlobal(Offset.zero) & box.size
-        : null;
-    try {
-      await ItineraryShare.sharePdf(trip, sharePositionOrigin: origin);
-    } catch (_) {
-      await Clipboard.setData(ClipboardData(text: ItineraryShare.buildText(trip)));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Itinerary copied to clipboard')),
-        );
-      }
-    }
-  }
-
-  Future<void> _copyLink(BuildContext context) async {
-    // A self-contained link that carries the whole itinerary — no server. It
-    // looks long/opaque because the trip data is packed inside it; opening it
-    // on a device with PlanSync installed loads the itinerary.
-    await Clipboard.setData(ClipboardData(text: TripLink.encode(trip).toString()));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Link copied. Tapping it in PlanSync opens this itinerary — paste it into a TravelSync post.'),
-        ),
-      );
-    }
-  }
+/// Lighter bar for the per-day drill-in: just back + trip name. Share, edit,
+/// and delete live one tap back, on [TripReviewScreen]'s [TripTopBar].
+class _DayTopBar extends StatelessWidget {
+  final String tripName;
+  const _DayTopBar({required this.tripName});
 
   @override
   Widget build(BuildContext context) {
-    final colors = tripCovers[trip.cover]!;
     final topInset = MediaQuery.of(context).padding.top;
-    final flag = trip.destination != null ? flagEmoji(trip.destination!.countryCode) : '';
-    return Container(
-      padding: EdgeInsets.fromLTRB(4, topInset + 6, 8, 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [colors.first.withValues(alpha: 0.6), AppColors.background],
-        ),
-      ),
-      child: Column(
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4, topInset + 6, 20, 10),
+      child: Row(
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-              // Trip title beside the back button, ellipsized if long.
-              Expanded(
-                child: Text(
-                  trip.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.display(22),
-                ),
-              ),
-              PopupMenuButton<int>(
-                icon: Icon(Icons.ios_share_rounded, color: AppColors.textSecondary),
-                color: AppColors.surfaceHigh,
-                onSelected: (v) {
-                  if (v == 0) {
-                    _shareItinerary(context);
-                  } else {
-                    _copyLink(context);
-                  }
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(value: 0, child: Text('Share itinerary', style: AppText.body(14))),
-                  PopupMenuItem(value: 1, child: Text('Copy trip link', style: AppText.body(14))),
-                ],
-              ),
-              IconButton(
-                onPressed: onEdit,
-                icon: Icon(Icons.edit_outlined, color: AppColors.accent),
-              ),
-              IconButton(
-                onPressed: onDelete,
-                icon: Icon(Icons.delete_outline_rounded, color: AppColors.warning),
-              ),
-            ],
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 12, 0),
-            child: Row(
-              children: [
-                if (flag.isNotEmpty) ...[
-                  Text(flag, style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                ] else ...[
-                  Icon(Icons.place_rounded, size: 13, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
-                ],
-                Flexible(
-                  child: Text(
-                    trip.hasDestination ? trip.destinationLabel : 'No destination selected',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body(13, color: AppColors.textSecondary),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(shortRange(trip.startDate, trip.endDate), style: AppText.label(11, color: AppColors.textMuted)),
-              ],
+          Expanded(
+            child: Text(
+              tripName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.display(19),
             ),
           ),
         ],

@@ -11,7 +11,7 @@ import 'services/trip_link.dart';
 import 'theme/app_theme.dart';
 import 'ui/home/home_screen.dart';
 import 'ui/onboarding/onboarding_screen.dart';
-import 'ui/trip/trip_detail_screen.dart';
+import 'ui/trip/trip_review_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -111,7 +111,7 @@ class _PlanSyncAppState extends State<PlanSyncApp> {
     if (ok != true) return;
     final trip = await TripController.instance.importTrip(decoded);
     _navKey.currentState?.push(
-      MaterialPageRoute(builder: (_) => TripDetailScreen(tripId: trip.id)),
+      MaterialPageRoute(builder: (_) => TripReviewScreen(tripId: trip.id)),
     );
   }
 

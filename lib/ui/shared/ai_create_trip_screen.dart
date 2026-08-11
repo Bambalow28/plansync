@@ -10,7 +10,7 @@ import '../../services/ai_itinerary_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
-import '../trip/trip_detail_screen.dart';
+import '../trip/trip_review_screen.dart';
 import 'date_range_dialog.dart';
 import 'hotel_address_field.dart';
 import 'place_search_field.dart';
@@ -115,7 +115,7 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
     if (_done) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => TripDetailScreen(tripId: _createdTrip!.id)),
+        MaterialPageRoute(builder: (_) => TripReviewScreen(tripId: _createdTrip!.id)),
       );
       return;
     }
