@@ -22,6 +22,11 @@ class JourneyMapView extends StatelessWidget {
           const _Rail(),
           Expanded(
             child: Column(
+              // Without stretch, a day row's Stack sizes to its own (shorter)
+              // content and Column centers it — the giveaway was short-route
+              // days (usually the first/last) landing visibly indented next
+              // to longer-route days that happened to span the full width.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < days.length; i++) ...[
                   _DayRow(dayIndex: i, day: days[i], trip: trip, onTap: () => onTapDay(i)),

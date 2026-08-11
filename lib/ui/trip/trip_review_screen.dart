@@ -97,7 +97,13 @@ class _TripReviewScreenState extends State<TripReviewScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                  child: _ViewSwitch(view: _view, onChanged: _setView),
+                  // SliverToBoxAdapter forces its child to the full viewport
+                  // width, so without this the switch's Container would
+                  // stretch edge-to-edge despite the Row's mainAxisSize.min.
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _ViewSwitch(view: _view, onChanged: _setView),
+                  ),
                 ),
               ),
               SliverPadding(
