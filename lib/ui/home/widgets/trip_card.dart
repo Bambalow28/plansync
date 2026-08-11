@@ -94,6 +94,10 @@ class TripCard extends StatelessWidget {
                       style: AppText.label(12, color: AppColors.textSecondary),
                     ),
                     const Spacer(),
+                    if (tripIsOngoing(trip.startDate, trip.endDate)) ...[
+                      const _PulsingDot(),
+                      const SizedBox(width: 6),
+                    ],
                     Text(
                       tripCountdownLabel(trip.startDate, trip.endDate),
                       style: AppText.label(12, color: AppColors.textSecondary),
@@ -236,6 +240,58 @@ class _DayBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A small "live" indicator for a trip in progress — a dot with an expanding,
+/// fading halo, looping.
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        return SizedBox(
+          width: 12,
+          height: 12,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Opacity(
+                opacity: (1 - t).clamp(0.0, 1.0),
+                child: Transform.scale(
+                  scale: 0.5 + t * 1.5,
+                  child: Container(
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.5)),
+                  ),
+                ),
+              ),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

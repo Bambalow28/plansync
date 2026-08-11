@@ -599,15 +599,30 @@ class _NowContent extends StatelessWidget {
   final String time;
   const _NowContent({required this.time});
 
+  // Matches _RailRow._nodeCenter (its node's own vertical center, _nodeTop 18
+  // + half the 14px node) so the line meets the dot instead of floating
+  // above/below it — a plain Row here centers on its own text height, which
+  // isn't the same number.
+  static const _lineY = 25.0;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
+    return SizedBox(
+      height: 40,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Expanded(child: Container(height: 1, color: AppColors.warning.withValues(alpha: 0.65))),
-          const SizedBox(width: 8),
-          Text('NOW · $time', style: AppText.label(10, color: AppColors.warning, tracking: 0.8)),
+          Positioned(
+            top: _lineY - 0.5,
+            left: 0,
+            right: 0,
+            child: Container(height: 1, color: AppColors.warning.withValues(alpha: 0.65)),
+          ),
+          Positioned(
+            top: _lineY - 7.5,
+            left: 10,
+            child: Text('NOW · $time', style: AppText.label(10, color: AppColors.warning, tracking: 0.8)),
+          ),
         ],
       ),
     );

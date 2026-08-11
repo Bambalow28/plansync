@@ -48,24 +48,11 @@ class _DayCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Day ${dayIndex + 1}', style: AppText.display(16)),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${dayWeekday(day)}, ${monthShort(day)} ${dayNum(day)}',
-                        style: AppText.label(9, color: AppColors.textMuted, tracking: 0.8),
-                      ),
-                    ],
-                  ),
-                ),
-                _DayStamp(dayIndex: dayIndex, day: day),
-              ],
+            Text('Day ${dayIndex + 1}', style: AppText.display(16)),
+            const SizedBox(height: 2),
+            Text(
+              '${dayWeekday(day)}, ${monthShort(day)} ${dayNum(day)}',
+              style: AppText.label(9, color: AppColors.textMuted, tracking: 0.8),
             ),
             const SizedBox(height: 10),
             if (items.isEmpty)
@@ -75,33 +62,6 @@ class _DayCard extends StatelessWidget {
               )
             else
               for (final item in items) _PlaceRow(item: item, day: day),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DayStamp extends StatelessWidget {
-  final int dayIndex;
-  final DateTime day;
-  const _DayStamp({required this.dayIndex, required this.day});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.5), width: 1.5, style: BorderStyle.solid),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('${dayIndex + 1}', style: AppText.display(15)),
-            Text(monthShort(day).toUpperCase(), style: AppText.label(6, color: AppColors.textMuted, tracking: 0.5)),
           ],
         ),
       ),

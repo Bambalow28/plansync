@@ -3,6 +3,7 @@ import '../../controllers/trip_controller.dart';
 import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
 import '../shared/create_choice_sheet.dart';
+import '../trip/trip_detail_screen.dart';
 import '../trip/trip_review_screen.dart';
 import 'widgets/trip_card.dart';
 
@@ -31,9 +32,15 @@ class HomeScreen extends StatelessWidget {
       child: TripCard(
         trip: trip,
         dimmed: dimmed,
+        // Only past trips get the day-by-day Review summary; an ongoing or
+        // upcoming trip opens straight into the usual full-itinerary view.
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => TripReviewScreen(tripId: trip.id)),
+          MaterialPageRoute(
+            builder: (_) => trip.isPast
+                ? TripReviewScreen(tripId: trip.id)
+                : TripDetailScreen(tripId: trip.id, showFullTopBar: true),
+          ),
         ),
       ),
     );
@@ -83,20 +90,13 @@ class HomeScreen extends StatelessWidget {
           listenable: controller,
           builder: (context, _) {
             final trips = controller.trips;
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
-            bool isPast(t) => DateTime(
-              t.endDate.year,
-              t.endDate.month,
-              t.endDate.day,
-            ).isBefore(today);
             final active = [
               for (final t in trips)
-                if (!isPast(t)) t,
+                if (!t.isPast) t,
             ];
             final past = [
               for (final t in trips)
-                if (isPast(t)) t,
+                if (t.isPast) t,
             ];
 
             return CustomScrollView(

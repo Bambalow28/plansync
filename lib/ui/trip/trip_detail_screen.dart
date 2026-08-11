@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../controllers/trip_controller.dart';
+import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
 import '../shared/add_item_sheet.dart';
+import '../shared/add_trip_sheet.dart';
 import 'widgets/budget_summary.dart';
 import 'widgets/day_selector.dart';
 import 'widgets/plan_details_dialog.dart';
 import 'widgets/timeline_view.dart';
+import 'widgets/trip_top_bar.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final String tripId;
@@ -15,7 +18,19 @@ class TripDetailScreen extends StatefulWidget {
   /// day from the trip-level summary.
   final int? initialDayIndex;
 
-  const TripDetailScreen({super.key, required this.tripId, this.initialDayIndex});
+  /// True when this screen is the trip's landing page (an ongoing or
+  /// upcoming trip, opened directly from Home) rather than a drill-in from
+  /// [TripReviewScreen] — only past trips get the Review summary, so a
+  /// current trip needs its own edit/share/delete affordances here instead
+  /// of one tap back.
+  final bool showFullTopBar;
+
+  const TripDetailScreen({
+    super.key,
+    required this.tripId,
+    this.initialDayIndex,
+    this.showFullTopBar = false,
+  });
 
   @override
   State<TripDetailScreen> createState() => _TripDetailScreenState();
@@ -58,6 +73,34 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
+  Future<void> _confirmDelete(Trip trip) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceHigh,
+        title: Text('Delete trip?', style: AppText.display(20)),
+        content: Text(
+          '“${trip.name}” and all its plans will be removed.',
+          style: AppText.body(14, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: AppText.body(14, color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete', style: AppText.body(14, color: AppColors.warning)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await TripController.instance.deleteTrip(trip.id);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -78,7 +121,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
           body: Column(
             children: [
-              _DayTopBar(tripName: trip.name),
+              if (widget.showFullTopBar)
+                TripTopBar(
+                  trip: trip,
+                  onEdit: () => AddTripSheet.show(context, existing: trip),
+                  onDelete: () => _confirmDelete(trip),
+                )
+              else
+                _DayTopBar(tripName: trip.name),
               // The whole page below the top bar scrolls together; a horizontal
               // swipe moves to the previous/next day.
               Expanded(

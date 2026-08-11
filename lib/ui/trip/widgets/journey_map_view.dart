@@ -41,28 +41,47 @@ class JourneyMapView extends StatelessWidget {
   }
 }
 
+/// Width of the rail column — shared with [_DayRow] so its dot lands exactly
+/// on the line's center regardless of either value changing later.
+const _railWidth = 18.0;
+const _dotSize = 9.0;
+
 class _Rail extends StatelessWidget {
   const _Rail();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 18,
-      child: Center(
-        child: Container(
-          width: 1,
-          margin: const EdgeInsets.only(top: 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.accent.withValues(alpha: 0.35), AppColors.accent.withValues(alpha: 0.08)],
-            ),
+      width: _railWidth,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        // Center gives the painted line loose height constraints; without an
+        // explicit height a plain Container here collapses to zero and never
+        // draws — SizedBox.expand claims all the height Center offers.
+        child: Center(
+          child: SizedBox(
+            width: 2,
+            child: SizedBox.expand(child: CustomPaint(painter: _DottedRailPainter())),
           ),
         ),
       ),
     );
   }
+}
+
+class _DottedRailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = AppColors.accent.withValues(alpha: 0.4);
+    const spacing = 7.0;
+    final x = size.width / 2;
+    for (var y = 0.0; y <= size.height; y += spacing) {
+      canvas.drawCircle(Offset(x, y), 1.1, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DottedRailPainter oldDelegate) => false;
 }
 
 class _DayRow extends StatelessWidget {
@@ -84,11 +103,15 @@ class _DayRow extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            left: -18 - 4,
+            // The rail's dotted line sits at the center of _railWidth; this
+            // Stack starts right after that column, so centering the dot on
+            // the line means offsetting back by half the rail plus half the
+            // dot — not the old eyeballed "-18-4", which sat well past it.
+            left: -(_railWidth / 2) - (_dotSize / 2),
             top: 3,
             child: Container(
-              width: 9,
-              height: 9,
+              width: _dotSize,
+              height: _dotSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.accent,

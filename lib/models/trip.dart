@@ -59,6 +59,15 @@ class Trip {
     (i) => DateTime(startDate.year, startDate.month, startDate.day + i),
   );
 
+  /// True once the trip has fully ended (relative to today) — the signal for
+  /// whether a trip gets the Trip Review summary or opens straight into the
+  /// full itinerary.
+  bool get isPast {
+    final today = DateTime.now();
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    return end.isBefore(DateTime(today.year, today.month, today.day));
+  }
+
   double get spent =>
       items.fold(0.0, (sum, i) => sum + i.cost) + expenses.fold(0.0, (sum, e) => sum + e.amount);
   double get remaining => budget - spent;
