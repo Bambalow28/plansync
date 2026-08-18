@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../controllers/trip_controller.dart';
 import '../../models/place.dart';
 import '../../models/trip.dart';
+import '../../services/unsplash_service.dart';
 import '../../theme/app_theme.dart';
 import '../shared/create_choice_sheet.dart';
 import '../shared/place_search_field.dart';
@@ -10,8 +13,34 @@ import '../trip/trip_review_screen.dart';
 import 'widgets/suggested_carousel.dart';
 import 'widgets/trip_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // The user's own trips get their photos resolved first — ahead of the
+    // carousel's suggestions, which are the more expendable of the two if the
+    // hourly Unsplash budget runs short.
+    _prefetchTripPhotos();
+  }
+
+  Future<void> _prefetchTripPhotos() async {
+    if (!UnsplashService.instance.isConfigured) return;
+    for (final trip in TripController.instance.trips) {
+      final destination = trip.destination;
+      if (destination == null) continue;
+      final url = await UnsplashService.instance
+          .photoUrl('${destination.city} ${destination.country} travel');
+      if (!mounted || url == null) continue;
+      unawaited(precacheImage(CachedNetworkImageProvider(url), context));
+    }
+  }
 
   Widget _dismissibleCard(
     BuildContext context,

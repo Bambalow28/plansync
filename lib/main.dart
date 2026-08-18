@@ -8,6 +8,7 @@ import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/trip_link.dart';
+import 'services/unsplash_service.dart';
 import 'theme/app_theme.dart';
 import 'ui/home/home_screen.dart';
 import 'ui/onboarding/onboarding_screen.dart';
@@ -28,6 +29,9 @@ void main() async {
     ),
   );
   await TripController.instance.load();
+  // Load the saved destination-photo urls before the first frame so cards that
+  // already have one paint it immediately instead of resolving it again.
+  await UnsplashService.instance.warmUp();
   // Set up local notifications, then schedule reminders for existing plans.
   await NotificationService.instance.init();
   await NotificationService.instance.syncAll(TripController.instance.trips);

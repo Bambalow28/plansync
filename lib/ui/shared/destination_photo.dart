@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/unsplash_service.dart';
@@ -113,22 +114,16 @@ class _DestinationPhotoState extends State<DestinationPhoto> {
             // gradient underneath.
             child: Opacity(
               opacity: widget.dimmed ? 0.32 : 1,
-              child: Image.network(
-                _url!,
+              child: CachedNetworkImage(
+                imageUrl: _url!,
                 fit: BoxFit.cover,
-                // Fade in rather than snapping once the bytes land. An image
-                // already in the cache loads synchronously and skips this.
-                frameBuilder: (context, child, frame, wasSyncLoaded) {
-                  if (wasSyncLoaded) return child;
-                  return AnimatedOpacity(
-                    opacity: frame == null ? 0 : 1,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOut,
-                    child: child,
-                  );
-                },
+                // Bytes already on disk paint with no transition at all; only
+                // a genuine download fades in.
+                fadeInDuration: const Duration(milliseconds: 300),
+                fadeOutDuration: Duration.zero,
+                placeholder: (_, _) => const SizedBox.shrink(),
                 // A broken image just falls back to the gradient already below.
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                errorWidget: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
           ),

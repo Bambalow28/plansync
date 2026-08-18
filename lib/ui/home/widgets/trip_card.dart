@@ -40,7 +40,6 @@ class TripCard extends StatelessWidget {
         ? [for (final c in baseColors) Color.lerp(c, AppColors.surfaceLow, 0.78)!]
         : baseColors;
 
-    final flag = trip.destination != null ? flagEmoji(trip.destination!.countryCode) : '';
     final ongoing = !dimmed && tripIsOngoing(trip.startDate, trip.endDate);
 
     return GestureDetector(
@@ -68,13 +67,9 @@ class TripCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _PlaceLine(trip: trip, flag: flag)),
+                        Expanded(child: _PlaceLine(trip: trip)),
                         const SizedBox(width: 12),
-                        if (dimmed) ...[
-                          const _PastChip(),
-                          const SizedBox(width: 8),
-                        ],
-                        _DayBadge(count: trip.dayCount),
+                        _DayBadge(count: trip.dayCount, ongoing: ongoing),
                       ],
                     ),
                     const Spacer(),
@@ -104,20 +99,14 @@ class TripCard extends StatelessWidget {
 /// City and country, above the trip's own name — the fact the photo is of.
 class _PlaceLine extends StatelessWidget {
   final Trip trip;
-  final String flag;
-  const _PlaceLine({required this.trip, required this.flag});
+  const _PlaceLine({required this.trip});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        if (flag.isNotEmpty) ...[
-          Text(flag, style: const TextStyle(fontSize: 13)),
-          const SizedBox(width: 6),
-        ] else ...[
-          Icon(Icons.place_rounded, size: 12, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
-        ],
+        Icon(Icons.place_rounded, size: 12, color: AppColors.textSecondary),
+        const SizedBox(width: 4),
         Flexible(
           child: Text(
             trip.hasDestination
@@ -157,10 +146,6 @@ class _DateLine extends StatelessWidget {
         // A finished trip has no countdown left to run.
         if (!dimmed) ...[
           const Spacer(),
-          if (ongoing) ...[
-            const _PulsingDot(),
-            const SizedBox(width: 6),
-          ],
           Text(
             tripCountdownLabel(trip.startDate, trip.endDate),
             style: AppText.label(12, color: ongoing ? AppColors.accent : AppColors.textSecondary),
@@ -216,31 +201,16 @@ class _BudgetBar extends StatelessWidget {
   }
 }
 
-/// Marks a finished trip, so "archived" doesn't rely on dimming alone.
-class _PastChip extends StatelessWidget {
-  const _PastChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Text('PAST', style: AppText.label(9, color: AppColors.textSecondary)),
-    );
-  }
-}
-
+/// Day count, with the live dot pinned to its top-left corner while the trip
+/// is actually running.
 class _DayBadge extends StatelessWidget {
   final int count;
-  const _DayBadge({required this.count});
+  final bool ongoing;
+  const _DayBadge({required this.count, required this.ongoing});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.32),
@@ -256,6 +226,16 @@ class _DayBadge extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (!ongoing) return badge;
+    // Clipping is off by default on Stack, so the dot can sit proud of the
+    // badge's corner rather than being trimmed by it.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        badge,
+        const Positioned(left: -5, top: -5, child: _PulsingDot()),
+      ],
     );
   }
 }
