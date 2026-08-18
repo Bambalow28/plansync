@@ -4,224 +4,232 @@ import '../../../theme/app_theme.dart';
 import '../../../utils/format.dart';
 import '../../shared/destination_photo.dart';
 
-/// A trip summary card: gradient cover, name + destination, date range, day
-/// count, and a budget progress bar.
+/// A trip summary card, built on the same photo backdrop as the suggested-
+/// destination carousel: the destination's own photograph when there's a
+/// network and a key, the trip's gradient cover otherwise.
+///
+/// Reading order top to bottom: where it is, what it's called, when it runs,
+/// and — when a budget is set — how the money is going. The day count sits
+/// top-right, opposite the place.
+///
+/// The whole card is the tap target for both active and past trips. An earlier
+/// version put a small "View trip" button on past cards and made their body
+/// inert; a full-bleed photo already reads as one object, so a competing
+/// button inside it just shrank the target and split the affordance in two.
+/// Past trips are instead marked by a desaturated photo and a PAST chip.
 class TripCard extends StatelessWidget {
   final Trip trip;
   final VoidCallback onTap;
 
-  /// Past trips render dimmed/desaturated but still open on tap.
+  /// Past trips render desaturated so they read as archived.
   final bool dimmed;
-  const TripCard({super.key, required this.trip, required this.onTap, this.dimmed = false});
+
+  const TripCard({
+    super.key,
+    required this.trip,
+    required this.onTap,
+    this.dimmed = false,
+  });
+
+  static const double _height = 210;
 
   @override
   Widget build(BuildContext context) {
     final baseColors = tripCovers[trip.cover]!;
-    // Past trips are heavily desaturated so they read as archived.
     final colors = dimmed
         ? [for (final c in baseColors) Color.lerp(c, AppColors.surfaceLow, 0.78)!]
         : baseColors;
-    final spent = trip.spent;
-    final hasBudget = trip.budget > 0;
-    final ratio = hasBudget ? (spent / trip.budget).clamp(0.0, 1.0) : 0.0;
-    final over = hasBudget && spent > trip.budget;
-    final flag = trip.destination != null ? flagEmoji(trip.destination!.countryCode) : '';
 
-    // The card's informational content (everything except the View-trip button).
-    final info = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
+    final flag = trip.destination != null ? flagEmoji(trip.destination!.countryCode) : '';
+    final ongoing = !dimmed && tripIsOngoing(trip.startDate, trip.endDate);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        height: _height,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+            ),
+            child: DestinationPhoto(
+              query: trip.hasDestination
+                  ? '${trip.destination!.city} ${trip.destination!.country} travel'
+                  : '',
+              gradient: colors,
+              dimmed: dimmed,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          trip.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.display(24),
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            if (flag.isNotEmpty) ...[
-                              Text(flag, style: const TextStyle(fontSize: 14)),
-                              const SizedBox(width: 6),
-                            ] else ...[
-                              Icon(
-                                Icons.place_rounded,
-                                size: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 4),
-                            ],
-                            Flexible(
-                              child: Text(
-                                trip.hasDestination
-                                    ? trip.destinationLabel
-                                    : 'No destination selected',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.body(
-                                  13,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        Expanded(child: _PlaceLine(trip: trip, flag: flag)),
+                        const SizedBox(width: 12),
+                        if (dimmed) ...[
+                          const _PastChip(),
+                          const SizedBox(width: 8),
+                        ],
+                        _DayBadge(count: trip.dayCount),
                       ],
                     ),
-                  ),
-                  _DayBadge(count: trip.dayCount),
-                ],
-              ),
-              // Active trips show the date range + countdown here. Past trips
-              // move the dates down beside the View-trip button (no "Ended").
-              if (!dimmed) ...[
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 13,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      shortRange(trip.startDate, trip.endDate),
-                      style: AppText.label(12, color: AppColors.textSecondary),
-                    ),
                     const Spacer(),
-                    if (tripIsOngoing(trip.startDate, trip.endDate)) ...[
-                      const _PulsingDot(),
-                      const SizedBox(width: 6),
+                    Text(
+                      trip.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.display(26),
+                    ),
+                    const SizedBox(height: 6),
+                    _DateLine(trip: trip, ongoing: ongoing, dimmed: dimmed),
+                    if (trip.budget > 0) ...[
+                      const SizedBox(height: 12),
+                      _BudgetBar(trip: trip),
                     ],
-                    Text(
-                      tripCountdownLabel(trip.startDate, trip.endDate),
-                      style: AppText.label(12, color: AppColors.textSecondary),
-                    ),
                   ],
                 ),
-              ],
-              if (hasBudget) ...[
-                const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: ratio,
-                    minHeight: 6,
-                    backgroundColor: Colors.black.withValues(alpha: 0.3),
-                    valueColor: AlwaysStoppedAnimation(
-                      over ? AppColors.warning : AppColors.accent,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      '${money(spent, trip.currency)} spent',
-                      style: AppText.label(11, color: AppColors.textSecondary),
-                    ),
-                    const Spacer(),
-                    Text(
-                      over
-                          ? '${money(spent - trip.budget, trip.currency)} over'
-                          : '${money(trip.remaining, trip.currency)} left',
-                      style: AppText.label(
-                        11,
-                        color: over ? AppColors.warning : AppColors.accent,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          );
-
-    if (!dimmed) {
-      return GestureDetector(onTap: onTap, child: _shell(colors, info));
-    }
-    // Past trip: the body is dimmed and NOT tappable; only the subtle
-    // "View trip" button (bottom-right) opens the trip.
-    return _shell(
-      colors,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Opacity(opacity: 0.45, child: info),
-          const SizedBox(height: 16),
-          // Dates aligned on the same row as the View-trip button.
-          Row(
-            children: [
-              Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.textMuted),
-              const SizedBox(width: 6),
-              Text(
-                shortRange(trip.startDate, trip.endDate),
-                style: AppText.label(12, color: AppColors.textSecondary),
               ),
-              const Spacer(),
-              _ViewTripButton(onTap: onTap),
-            ],
+            ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _shell(List<Color> colors, Widget child) {
-    // A trip with a real destination upgrades to a photo of it when there's a
-    // network and a configured key; otherwise this is exactly the gradient
-    // card it has always been.
-    final query = trip.hasDestination
-        ? '${trip.destination!.city} ${trip.destination!.country} travel'
-        : '';
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: DestinationPhoto(
-        query: query,
-        gradient: colors,
-        dimmed: dimmed,
-        child: Padding(padding: const EdgeInsets.all(20), child: child),
+        ),
       ),
     );
   }
 }
 
-/// "View trip" action for a dimmed past-trip card. Accent-tinted so it clearly
-/// reads as pressable, but soft enough not to compete with the bright "New
-/// Trip" call-to-action.
-class _ViewTripButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _ViewTripButton({required this.onTap});
+/// City and country, above the trip's own name — the fact the photo is of.
+class _PlaceLine extends StatelessWidget {
+  final Trip trip;
+  final String flag;
+  const _PlaceLine({required this.trip, required this.flag});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
+    return Row(
+      children: [
+        if (flag.isNotEmpty) ...[
+          Text(flag, style: const TextStyle(fontSize: 13)),
+          const SizedBox(width: 6),
+        ] else ...[
+          Icon(Icons.place_rounded, size: 12, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+        ],
+        Flexible(
+          child: Text(
+            trip.hasDestination
+                ? trip.destinationLabel.toUpperCase()
+                : 'NO DESTINATION',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.label(10, color: AppColors.textSecondary),
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('View trip', style: AppText.body(13, color: AppColors.accent, weight: FontWeight.w600)),
+      ],
+    );
+  }
+}
+
+/// Dates, plus the countdown (and live dot) while the trip still lies ahead.
+class _DateLine extends StatelessWidget {
+  final Trip trip;
+  final bool ongoing;
+  final bool dimmed;
+  const _DateLine({required this.trip, required this.ongoing, required this.dimmed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textMuted),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            shortRange(trip.startDate, trip.endDate),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.label(12, color: AppColors.textSecondary),
+          ),
+        ),
+        // A finished trip has no countdown left to run.
+        if (!dimmed) ...[
+          const Spacer(),
+          if (ongoing) ...[
+            const _PulsingDot(),
             const SizedBox(width: 6),
-            Icon(Icons.arrow_forward_rounded, size: 15, color: AppColors.accent),
+          ],
+          Text(
+            tripCountdownLabel(trip.startDate, trip.endDate),
+            style: AppText.label(12, color: ongoing ? AppColors.accent : AppColors.textSecondary),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Budget progress with the spent/left figures on the same line as the bar's
+/// meaning, kept to one row so the photo still has room to breathe.
+class _BudgetBar extends StatelessWidget {
+  final Trip trip;
+  const _BudgetBar({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final spent = trip.spent;
+    final ratio = (spent / trip.budget).clamp(0.0, 1.0);
+    final over = spent > trip.budget;
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 5,
+            backgroundColor: Colors.black.withValues(alpha: 0.35),
+            valueColor: AlwaysStoppedAnimation(
+              over ? AppColors.warning : AppColors.accent,
+            ),
+          ),
+        ),
+        const SizedBox(height: 7),
+        Row(
+          children: [
+            Text(
+              '${money(spent, trip.currency)} spent',
+              style: AppText.label(10, color: AppColors.textSecondary),
+            ),
+            const Spacer(),
+            Text(
+              over
+                  ? '${money(spent - trip.budget, trip.currency)} over'
+                  : '${money(trip.remaining, trip.currency)} left',
+              style: AppText.label(10, color: over ? AppColors.warning : AppColors.accent),
+            ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+/// Marks a finished trip, so "archived" doesn't rely on dimming alone.
+class _PastChip extends StatelessWidget {
+  const _PastChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
+      child: Text('PAST', style: AppText.label(9, color: AppColors.textSecondary)),
     );
   }
 }
@@ -233,15 +241,15 @@ class _DayBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
+        color: Colors.black.withValues(alpha: 0.32),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
-          Text('$count', style: AppText.display(20)),
+          Text('$count', style: AppText.display(19)),
           Text(
             'DAYS',
             style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),

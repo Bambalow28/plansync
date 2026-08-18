@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/suggested_places.dart';
 import '../../../models/trip.dart';
 import '../../../services/location_service.dart';
+import '../../../services/unsplash_service.dart';
 import '../../../theme/app_theme.dart';
 import '../../shared/create_choice_sheet.dart';
 import '../../shared/destination_photo.dart';
@@ -20,6 +21,10 @@ class SuggestedCarousel extends StatefulWidget {
 const _kCardHeight = 168.0;
 const _kAutoAdvance = Duration(seconds: 5);
 
+/// How many cards ahead to warm. Each costs one Unsplash request against a
+/// 50/hour demo-tier budget, so this stays well short of the full list.
+const _kPrefetchCount = 6;
+
 class _SuggestedCarouselState extends State<SuggestedCarousel> {
   final _controller = PageController(viewportFraction: 0.84);
   Timer? _timer;
@@ -34,6 +39,7 @@ class _SuggestedCarouselState extends State<SuggestedCarousel> {
     _places = suggestionsFor(month: DateTime.now().month);
     _controller.addListener(_onScroll);
     _startTimer();
+    _prefetch();
     LocationService.instance.countryCode().then(_applyRegion);
   }
 
@@ -43,6 +49,22 @@ class _SuggestedCarouselState extends State<SuggestedCarousel> {
     setState(() {
       _places = suggestionsFor(month: DateTime.now().month, region: region);
     });
+    // The reorder brings different cards to the front — warm those too.
+    _prefetch();
+  }
+
+  /// Resolve and decode the photos for the cards the user is about to see, so
+  /// they're already in the image cache when their card builds. Without this
+  /// each card starts its own request only once it scrolls into view, which
+  /// reads as a gradient that pops into a photo a beat later.
+  void _prefetch() {
+    if (!UnsplashService.instance.isConfigured) return;
+    for (final place in _places.take(_kPrefetchCount)) {
+      UnsplashService.instance.photoUrl(place.photoQuery).then((url) {
+        if (!mounted || url == null) return;
+        precacheImage(NetworkImage(url), context);
+      });
+    }
   }
 
   void _onScroll() {

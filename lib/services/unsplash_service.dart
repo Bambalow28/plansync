@@ -36,6 +36,11 @@ class UnsplashService {
     return _inFlight[q] ??= _fetch(q).whenComplete(() => _inFlight.remove(q));
   }
 
+  /// An already-resolved url for [query], without waiting. Lets a widget paint
+  /// its photo on the very first frame instead of flashing the gradient while
+  /// a Future that's already completed comes back around.
+  String? cachedUrl(String query) => _cache[query.trim()];
+
   Future<String?> _fetch(String query) async {
     if (_apiKey.isEmpty) {
       debugPrint('Unsplash skipped: UNSPLASH_API_KEY not set (pass --dart-define when running locally).');

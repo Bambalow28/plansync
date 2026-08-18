@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/place.dart';
 import '../../theme/app_theme.dart';
+import '../advisor/advisor_list_screen.dart';
 import 'add_trip_sheet.dart';
-import 'ai_create_trip_screen.dart';
 
 /// Choice sheet shown before creating a trip: AI-drafted or manual.
 class CreateChoiceSheet extends StatelessWidget {
@@ -45,18 +45,14 @@ class CreateChoiceSheet extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               _ChoiceCard(
-                icon: Icons.auto_awesome_rounded,
-                title: 'Create with AI',
-                subtitle: 'Let PlanSync draft your itinerary',
+                icon: Icons.workspace_premium_rounded,
+                title: 'Create with Advisor',
+                subtitle: 'Have someone who knows the place plan it',
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => AiCreateTripScreen(
-                        initialDestination: initialDestination,
-                      ),
-                    ),
+                    MaterialPageRoute(builder: (_) => const AdvisorListScreen()),
                   );
                 },
               ),

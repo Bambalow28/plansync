@@ -104,24 +104,22 @@ class HomeScreen extends StatelessWidget {
 
             return CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(child: _Header(trips: trips)),
+                const SliverToBoxAdapter(child: _TopBar()),
                 const SliverToBoxAdapter(child: SuggestedCarousel()),
-                const SliverToBoxAdapter(child: SizedBox(height: 26)),
+                // Separates discovery above from the user's own trips below.
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 22),
+                    child: Divider(height: 1, thickness: 1, color: AppColors.hairline),
+                  ),
+                ),
+                SliverToBoxAdapter(child: _GreetingBlock(trips: trips)),
                 if (trips.isEmpty)
                   const SliverToBoxAdapter(child: _EmptyState())
                 else ...[
                   // Every trip can be in the past, in which case this section
-                  // (header included) drops out entirely.
+                  // drops out entirely.
                   if (active.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 20, 10),
-                        child: Text(
-                          'YOUR TRIPS',
-                          style: AppText.label(11, color: AppColors.textMuted),
-                        ),
-                      ),
-                    ),
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                         20,
@@ -171,24 +169,15 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  final List trips;
-  const _Header({required this.trips});
-
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
+/// Brand row plus the "Where to go?" field — the discovery half of the screen,
+/// which sits above the suggestions carousel.
+class _TopBar extends StatelessWidget {
+  const _TopBar();
 
   @override
   Widget build(BuildContext context) {
-    final upcoming = trips
-        .where((t) => t.endDate.isAfter(DateTime.now()))
-        .length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,6 +241,33 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 22),
+          const _DestinationSearchBar(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Greeting and trip count — the "your stuff" half, below the carousel.
+class _GreetingBlock extends StatelessWidget {
+  final List<Trip> trips;
+  const _GreetingBlock({required this.trips});
+
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final upcoming = trips.where((t) => t.endDate.isAfter(DateTime.now())).length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(_greeting, style: AppText.label(12, color: AppColors.textMuted)),
           const SizedBox(height: 4),
           Text('Your trips', style: AppText.display(34)),
@@ -268,9 +284,6 @@ class _Header extends StatelessWidget {
               style: AppText.body(14, color: AppColors.textSecondary),
             ),
           ),
-          const SizedBox(height: 20),
-          const _DestinationSearchBar(),
-          const SizedBox(height: 24),
         ],
       ),
     );

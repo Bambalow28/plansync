@@ -51,7 +51,12 @@ class _DestinationPhotoState extends State<DestinationPhoto> {
   @override
   void initState() {
     super.initState();
-    // Same online gating the flight lookup and AI draft screens use.
+    // A url the carousel (or an earlier card) already resolved paints on the
+    // first frame — no gradient flash for anything prefetched.
+    _url = UnsplashService.instance.cachedUrl(widget.query);
+    // Start fetching straight away rather than waiting a hop for the
+    // connectivity probe; offline just fails fast into the gradient.
+    _load();
     _connSub = ConnectivityService.instance.onlineStream.listen(_setOnline);
     ConnectivityService.instance.isOnline().then(_setOnline);
   }
@@ -72,7 +77,7 @@ class _DestinationPhotoState extends State<DestinationPhoto> {
   }
 
   Future<void> _load() async {
-    if (!_online || _url != null || widget.query.isEmpty) return;
+    if (_url != null || widget.query.isEmpty) return;
     if (!UnsplashService.instance.isConfigured) return;
     final url = await UnsplashService.instance.photoUrl(widget.query);
     if (!mounted || url == null) return;
@@ -104,24 +109,32 @@ class _DestinationPhotoState extends State<DestinationPhoto> {
         ),
         if (showPhoto)
           Positioned.fill(
-            child: Image.network(
-              _url!,
-              fit: BoxFit.cover,
-              // Fade in rather than snapping once the bytes land.
-              frameBuilder: (context, child, frame, wasSyncLoaded) {
-                if (wasSyncLoaded) return child;
-                return AnimatedOpacity(
-                  opacity: frame == null ? 0 : (widget.dimmed ? 0.35 : 1),
-                  duration: const Duration(milliseconds: 450),
-                  curve: Curves.easeOut,
-                  child: child,
-                );
-              },
-              // A broken image just falls back to the gradient already below.
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            // Archived trips keep their photo, just faded well back toward the
+            // gradient underneath.
+            child: Opacity(
+              opacity: widget.dimmed ? 0.32 : 1,
+              child: Image.network(
+                _url!,
+                fit: BoxFit.cover,
+                // Fade in rather than snapping once the bytes land. An image
+                // already in the cache loads synchronously and skips this.
+                frameBuilder: (context, child, frame, wasSyncLoaded) {
+                  if (wasSyncLoaded) return child;
+                  return AnimatedOpacity(
+                    opacity: frame == null ? 0 : 1,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOut,
+                    child: child,
+                  );
+                },
+                // A broken image just falls back to the gradient already below.
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
             ),
           ),
-        // Scrim: keeps text legible over an unpredictable photo.
+        // Scrim: keeps text legible over an unpredictable photo. Weighted to
+        // the bottom, where the display type sits, but never fully clear at
+        // the top — the place label lives up there.
         if (showPhoto)
           Positioned.fill(
             child: DecoratedBox(
@@ -130,10 +143,11 @@ class _DestinationPhotoState extends State<DestinationPhoto> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.25),
-                    Colors.black.withValues(alpha: 0.72),
+                    Colors.black.withValues(alpha: 0.45),
+                    Colors.black.withValues(alpha: 0.28),
+                    Colors.black.withValues(alpha: 0.78),
                   ],
-                  stops: const [0.15, 1],
+                  stops: const [0, 0.35, 1],
                 ),
               ),
             ),
