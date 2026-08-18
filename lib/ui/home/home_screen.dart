@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../controllers/trip_controller.dart';
+import '../../models/place.dart';
 import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
 import '../shared/create_choice_sheet.dart';
+import '../shared/place_search_field.dart';
 import '../trip/trip_detail_screen.dart';
 import '../trip/trip_review_screen.dart';
+import 'widgets/suggested_carousel.dart';
 import 'widgets/trip_card.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -102,26 +105,40 @@ class HomeScreen extends StatelessWidget {
             return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(child: _Header(trips: trips)),
+                const SliverToBoxAdapter(child: SuggestedCarousel()),
+                const SliverToBoxAdapter(child: SizedBox(height: 26)),
                 if (trips.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _EmptyState(),
-                  )
+                  const SliverToBoxAdapter(child: _EmptyState())
                 else ...[
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      8,
-                      20,
-                      past.isEmpty ? 120 : 8,
+                  // Every trip can be in the past, in which case this section
+                  // (header included) drops out entirely.
+                  if (active.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 20, 10),
+                        child: Text(
+                          'YOUR TRIPS',
+                          style: AppText.label(11, color: AppColors.textMuted),
+                        ),
+                      ),
                     ),
-                    sliver: SliverList.separated(
-                      itemCount: active.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 16),
-                      itemBuilder: (context, i) =>
-                          _dismissibleCard(context, active[i]),
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        0,
+                        20,
+                        past.isEmpty ? 120 : 8,
+                      ),
+                      sliver: SliverList.separated(
+                        itemCount: active.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 16),
+                        itemBuilder: (context, i) => _EntranceFade(
+                          index: i,
+                          child: _dismissibleCard(context, active[i]),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                   if (past.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
@@ -137,8 +154,10 @@ class HomeScreen extends StatelessWidget {
                       sliver: SliverList.separated(
                         itemCount: past.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 16),
-                        itemBuilder: (context, i) =>
-                            _dismissibleCard(context, past[i], dimmed: true),
+                        itemBuilder: (context, i) => _EntranceFade(
+                          index: active.length + i,
+                          child: _dismissibleCard(context, past[i], dimmed: true),
+                        ),
                       ),
                     ),
                   ],
@@ -249,8 +268,67 @@ class _Header extends StatelessWidget {
               style: AppText.body(14, color: AppColors.textSecondary),
             ),
           ),
+          const SizedBox(height: 20),
+          const _DestinationSearchBar(),
+          const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+/// "Where to go?" field at the top of the home screen. Wraps the shared
+/// [PlaceSearchField] (same offline city dataset and dropdown used in the trip
+/// forms); picking a city opens the create flow with it pre-filled, then
+/// clears so the bar is ready for the next search.
+class _DestinationSearchBar extends StatefulWidget {
+  const _DestinationSearchBar();
+
+  @override
+  State<_DestinationSearchBar> createState() => _DestinationSearchBarState();
+}
+
+class _DestinationSearchBarState extends State<_DestinationSearchBar> {
+  // Bumped after each pick to remount the field with an empty value — the
+  // field owns its own text controller, so this is how it gets reset.
+  int _generation = 0;
+
+  void _onSelected(Place? place) {
+    if (place == null) return;
+    setState(() => _generation++);
+    CreateChoiceSheet.show(context, initialDestination: place);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PlaceSearchField(
+      key: ValueKey(_generation),
+      hint: 'Where to go?',
+      onSelected: _onSelected,
+    );
+  }
+}
+
+/// One-shot fade-and-rise for a list item, staggered by [index] so the trips
+/// arrive in sequence rather than all at once.
+class _EntranceFade extends StatelessWidget {
+  final int index;
+  final Widget child;
+  const _EntranceFade({required this.index, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      // Later cards start later, but the stagger stops growing after a handful
+      // so a long list doesn't leave the last card waiting seconds to appear.
+      duration: Duration(milliseconds: 380 + 70 * (index.clamp(0, 5))),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(offset: Offset(0, (1 - t) * 18), child: child),
+      ),
+      child: child,
     );
   }
 }

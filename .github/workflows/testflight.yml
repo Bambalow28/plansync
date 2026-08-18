@@ -40,12 +40,14 @@ jobs:
         env:
           AERODATABOX_API_KEY: ${{ secrets.AERODATABOX_API_KEY }}
           MAPBOX_API_KEY: ${{ secrets.MAPBOX_API_KEY }}
+          UNSPLASH_API_KEY: ${{ secrets.UNSPLASH_API_KEY }}
         run: >
           flutter build ipa
           --release
           --export-options-plist=ios/ExportOptions.plist
           --dart-define=AERODATABOX_API_KEY=$AERODATABOX_API_KEY
           --dart-define=MAPBOX_API_KEY=$MAPBOX_API_KEY
+          --dart-define=UNSPLASH_API_KEY=$UNSPLASH_API_KEY
       - name: Verify signing (debug)
         run: |
           # Check the exported IPA — NOT the .xcarchive, which is always

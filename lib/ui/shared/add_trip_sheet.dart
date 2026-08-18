@@ -11,12 +11,26 @@ import 'place_search_field.dart';
 /// Full page to create a new trip or edit an existing one.
 class AddTripSheet extends StatefulWidget {
   final Trip? existing;
-  const AddTripSheet({super.key, this.existing});
 
-  static Future<void> show(BuildContext context, {Trip? existing}) {
+  /// Pre-fills the destination for a new trip started from a place the user
+  /// already picked. Ignored when editing an existing trip.
+  final Place? initialDestination;
+
+  const AddTripSheet({super.key, this.existing, this.initialDestination});
+
+  static Future<void> show(
+    BuildContext context, {
+    Trip? existing,
+    Place? initialDestination,
+  }) {
     return Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => AddTripSheet(existing: existing)),
+      MaterialPageRoute(
+        builder: (_) => AddTripSheet(
+          existing: existing,
+          initialDestination: initialDestination,
+        ),
+      ),
     );
   }
 
@@ -39,8 +53,10 @@ class _AddTripSheetState extends State<AddTripSheet> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    _name = TextEditingController(text: e?.name ?? '');
-    _destination = e?.destination;
+    // A trip started from a chosen place gets that city as its working name —
+    // the user can still edit it before saving.
+    _name = TextEditingController(text: e?.name ?? widget.initialDestination?.city ?? '');
+    _destination = e?.destination ?? widget.initialDestination;
     _budget = TextEditingController(
       text: e != null ? moneyInput(e.budget) : '',
     );

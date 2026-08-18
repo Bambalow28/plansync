@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../models/place.dart';
@@ -74,6 +75,34 @@ class PlaceSearchService {
       }
     }
     return [...prefix, ...contains];
+  }
+
+  /// The bundled city closest to [lat]/[lon] — used to turn a GPS fix into a
+  /// country without a second (paid, online) reverse-geocoding call. Equirect-
+  /// angular approximation: at "which city is this" scale the error is far
+  /// below the spacing between cities, and it avoids trig per row.
+  Future<Place?> nearest(double lat, double lon) async {
+    await ensureLoaded();
+    final latRad = lat * math.pi / 180;
+    final lonScale = math.cos(latRad);
+    Place? best;
+    var bestDist = double.infinity;
+    for (final c in _cities!) {
+      final cLat = c.lat, cLon = c.lon;
+      if (cLat == null || cLon == null) continue;
+      final dy = cLat - lat;
+      // Longitudes wrap at the antimeridian; take the shorter way around.
+      var dx = cLon - lon;
+      if (dx > 180) dx -= 360;
+      if (dx < -180) dx += 360;
+      dx *= lonScale;
+      final dist = dy * dy + dx * dx;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = c.toPlace();
+      }
+    }
+    return best;
   }
 }
 

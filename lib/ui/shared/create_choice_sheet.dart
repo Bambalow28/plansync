@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+import '../../models/place.dart';
 import '../../theme/app_theme.dart';
 import 'add_trip_sheet.dart';
 import 'ai_create_trip_screen.dart';
 
 /// Choice sheet shown before creating a trip: AI-drafted or manual.
 class CreateChoiceSheet extends StatelessWidget {
-  const CreateChoiceSheet({super.key});
+  /// Pre-fills the destination when the flow was entered from a place the user
+  /// already picked (home search bar, suggested-destination carousel).
+  final Place? initialDestination;
 
-  static Future<void> show(BuildContext context) {
+  const CreateChoiceSheet({super.key, this.initialDestination});
+
+  static Future<void> show(BuildContext context, {Place? initialDestination}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const CreateChoiceSheet(),
+      builder: (_) => CreateChoiceSheet(initialDestination: initialDestination),
     );
   }
 
@@ -48,7 +53,9 @@ class CreateChoiceSheet extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const AiCreateTripScreen(),
+                      builder: (_) => AiCreateTripScreen(
+                        initialDestination: initialDestination,
+                      ),
                     ),
                   );
                 },
@@ -60,7 +67,7 @@ class CreateChoiceSheet extends StatelessWidget {
                 subtitle: 'Build your trip step by step',
                 onTap: () {
                   Navigator.pop(context);
-                  AddTripSheet.show(context);
+                  AddTripSheet.show(context, initialDestination: initialDestination);
                 },
               ),
             ],

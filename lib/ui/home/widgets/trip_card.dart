@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/trip.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/format.dart';
+import '../../shared/destination_photo.dart';
 
 /// A trip summary card: gradient cover, name + destination, date range, day
 /// count, and a budget progress bar.
@@ -172,17 +173,24 @@ class TripCard extends StatelessWidget {
   }
 
   Widget _shell(List<Color> colors, Widget child) {
+    // A trip with a real destination upgrades to a photo of it when there's a
+    // network and a configured key; otherwise this is exactly the gradient
+    // card it has always been.
+    final query = trip.hasDestination
+        ? '${trip.destination!.city} ${trip.destination!.country} travel'
+        : '';
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
-        ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
-      child: Padding(padding: const EdgeInsets.all(20), child: child),
+      clipBehavior: Clip.antiAlias,
+      child: DestinationPhoto(
+        query: query,
+        gradient: colors,
+        dimmed: dimmed,
+        child: Padding(padding: const EdgeInsets.all(20), child: child),
+      ),
     );
   }
 }

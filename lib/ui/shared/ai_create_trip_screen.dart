@@ -23,7 +23,11 @@ import 'place_search_field.dart';
 /// instead so the UI can still be seen end to end. The trip itself is always
 /// created — it just gets no itinerary items until a provider is connected.
 class AiCreateTripScreen extends StatefulWidget {
-  const AiCreateTripScreen({super.key});
+  /// Pre-fills the destination when the flow was entered from a place the user
+  /// already picked (home search bar, suggested-destination carousel).
+  final Place? initialDestination;
+
+  const AiCreateTripScreen({super.key, this.initialDestination});
 
   @override
   State<AiCreateTripScreen> createState() => _AiCreateTripScreenState();
@@ -75,6 +79,7 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
   @override
   void initState() {
     super.initState();
+    _destination = widget.initialDestination;
     // Generation calls Gemini, so gate it the same way the flight-code lookup
     // gates itself elsewhere in the app: online status only.
     _connSub = ConnectivityService.instance.onlineStream.listen(_setOnline);
@@ -250,7 +255,9 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
                             PlaceSearchField(
                               initialValue: _destination,
                               hint: 'Search city — e.g. Tokyo',
-                              autofocus: true,
+                              // Already filled in from the home screen? Don't
+                              // pop the keyboard over the dates step.
+                              autofocus: widget.initialDestination == null,
                               onSelected: (place) =>
                                   setState(() => _destination = place),
                             ),
