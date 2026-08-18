@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import '../../controllers/trip_controller.dart';
 import '../../models/place.dart';
 import '../../models/trip.dart';
+import '../../services/advisor_workspace.dart';
 import '../../services/unsplash_service.dart';
 import '../../theme/app_theme.dart';
+import '../advisor/advisor_dashboard_screen.dart';
+import '../advisor/apply_screen.dart';
 import '../shared/create_choice_sheet.dart';
 import '../shared/place_search_field.dart';
 import '../trip/trip_detail_screen.dart';
@@ -267,12 +270,109 @@ class _TopBar extends StatelessWidget {
                   ],
                 ),
               ),
+              const Spacer(),
+              const _AdvisorButton(),
             ],
           ),
           const SizedBox(height: 22),
           const _DestinationSearchBar(),
         ],
       ),
+    );
+  }
+}
+
+/// The one control in the wordmark row, carrying whichever of the three
+/// advisor states applies. It is deliberately one slot rather than a permanent
+/// extra button: for most people this is an invitation they will tap once and
+/// never see again, and for an advisor it becomes the way into their work.
+class _AdvisorButton extends StatelessWidget {
+  const _AdvisorButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final workspace = AdvisorWorkspace.instance;
+    return ListenableBuilder(
+      listenable: workspace,
+      builder: (context, _) {
+        final (label, icon, accent) = switch (workspace.status) {
+          AdvisorStatus.none => ('Apply', Icons.workspace_premium_outlined, false),
+          AdvisorStatus.pending => ('In review', Icons.hourglass_top_rounded, false),
+          AdvisorStatus.approved => ('Advisor', Icons.workspace_premium_rounded, true),
+        };
+        final pending = workspace.status == AdvisorStatus.approved
+            ? workspace.pendingRequestCount
+            : 0;
+
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => workspace.status == AdvisorStatus.approved
+                  ? const AdvisorDashboardScreen()
+                  : const ApplyScreen(),
+            ),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: accent
+                      ? AppColors.accent.withValues(alpha: 0.14)
+                      : AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: accent
+                        ? AppColors.accent.withValues(alpha: 0.45)
+                        : AppColors.hairline,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 13,
+                      color: accent ? AppColors.accent : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: AppText.label(
+                        10,
+                        color: accent ? AppColors.accent : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Unanswered requests are the one thing here worth interrupting
+              // the home screen for.
+              if (pending > 0)
+                Positioned(
+                  right: -3,
+                  top: -3,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.warning,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.background, width: 1.5),
+                    ),
+                    child: Text(
+                      '$pending',
+                      style: AppText.label(8, color: Colors.white, tracking: 0),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'controllers/trip_controller.dart';
 import 'models/trip.dart';
+import 'services/advisor_workspace.dart';
 import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
 import 'services/onboarding_service.dart';
@@ -32,6 +33,7 @@ void main() async {
   // Load the saved destination-photo urls before the first frame so cards that
   // already have one paint it immediately instead of resolving it again.
   await UnsplashService.instance.warmUp();
+  await AdvisorWorkspace.instance.load();
   // Set up local notifications, then schedule reminders for existing plans.
   await NotificationService.instance.init();
   await NotificationService.instance.syncAll(TripController.instance.trips);
