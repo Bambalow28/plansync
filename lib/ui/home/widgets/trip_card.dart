@@ -223,43 +223,63 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// A rubber-stamp "DONE" mark across a finished trip's card — reads as
-/// archived at a glance. Centered in the gap the layout already leaves
-/// between the top row and the footer, so it crosses the card at an angle
-/// without landing squarely on the day badge or the name/dates beneath it.
+/// A passport-style ink stamp across a finished trip's card — the concentric
+/// rings and center rule lines read as an official entry stamp rather than a
+/// plain rubber "DONE" mark. Centered in the gap the layout already leaves
+/// between the top row and the footer, and rotated as if stamped by hand.
 class _DoneStamp extends StatelessWidget {
   const _DoneStamp();
 
+  static const _ink = Color(0xFF8C7BF0);
+  static const _diameter = 92.0;
+
   @override
   Widget build(BuildContext context) {
+    final ink = _ink.withValues(alpha: 0.85);
+    final textShadows = [
+      Shadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 5),
+    ];
+    final ringShadows = [
+      BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 5),
+    ];
     return Center(
       child: Transform.rotate(
-        angle: -0.24,
+        angle: -0.26,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+          width: _diameter,
+          height: _diameter,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.55),
-              width: 2.5,
-            ),
-            borderRadius: BorderRadius.circular(5),
+            shape: BoxShape.circle,
+            border: Border.all(color: ink, width: 2.5),
+            boxShadow: ringShadows,
           ),
-          child: Text(
-            'DONE',
-            style:
-                AppText.label(
-                  32,
-                  color: Colors.white.withValues(alpha: 0.55),
-                  tracking: 7,
-                ).copyWith(
-                  fontWeight: FontWeight.w700,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 6,
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: ink, width: 1),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 30, height: 1.3, color: ink),
+                    const SizedBox(height: 5),
+                    Text(
+                      'DONE',
+                      style: AppText.label(15, color: ink, tracking: 2.5)
+                          .copyWith(
+                            fontWeight: FontWeight.w700,
+                            shadows: textShadows,
+                          ),
                     ),
+                    const SizedBox(height: 5),
+                    Container(width: 30, height: 1.3, color: ink),
                   ],
                 ),
+              ),
+            ),
           ),
         ),
       ),
@@ -306,7 +326,7 @@ class _DayBadge extends StatelessWidget {
               ],
             ),
           ),
-          if (ongoing) const Positioned(left: 1, top: 1, child: _PulsingDot()),
+          if (ongoing) const Positioned(left: 3, top: 3, child: _PulsingDot()),
         ],
       ),
     );
