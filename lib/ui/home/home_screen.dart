@@ -5,10 +5,12 @@ import '../../controllers/trip_controller.dart';
 import '../../models/place.dart';
 import '../../models/trip.dart';
 import '../../services/advisor_workspace.dart';
+import '../../services/auth_service.dart';
 import '../../services/unsplash_service.dart';
 import '../../theme/app_theme.dart';
 import '../advisor/advisor_dashboard_screen.dart';
 import '../advisor/apply_screen.dart';
+import '../auth/sign_in_screen.dart';
 import '../shared/create_choice_sheet.dart';
 import '../shared/place_search_field.dart';
 import '../trip/trip_detail_screen.dart';
@@ -305,14 +307,24 @@ class _AdvisorButton extends StatelessWidget {
             : 0;
 
         return GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => workspace.status == AdvisorStatus.approved
-                  ? const AdvisorDashboardScreen()
-                  : const ApplyScreen(),
-            ),
-          ),
+          onTap: () async {
+            if (AuthService.instance.currentUser == null) {
+              final signedIn = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(builder: (_) => const SignInScreen()),
+              );
+              if (signedIn != true || !context.mounted) return;
+            }
+            if (!context.mounted) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => workspace.status == AdvisorStatus.approved
+                    ? const AdvisorDashboardScreen()
+                    : const ApplyScreen(),
+              ),
+            );
+          },
           child: Stack(
             clipBehavior: Clip.none,
             children: [

@@ -5,8 +5,8 @@ import '../../../models/trip.dart';
 import '../../../services/location_service.dart';
 import '../../../services/unsplash_service.dart';
 import '../../../theme/app_theme.dart';
-import '../../shared/create_choice_sheet.dart';
 import '../../shared/destination_photo.dart';
+import '../../shared/plan_preview_sheet.dart';
 
 /// Auto-advancing strip of curated destinations, ordered by what's in season
 /// this month and biased toward the user's own region once (and if) a location
@@ -103,18 +103,9 @@ class _SuggestedCarouselState extends State<SuggestedCarousel> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 20, 10),
-          child: Row(
-            children: [
-              Text(
-                'TRENDING THIS MONTH',
-                style: AppText.label(11, color: AppColors.textMuted),
-              ),
-              const Spacer(),
-              Text(
-                '${_page.round() + 1}/${_places.length}',
-                style: AppText.label(10, color: AppColors.textMuted),
-              ),
-            ],
+          child: Text(
+            'TRENDING THIS MONTH',
+            style: AppText.label(11, color: AppColors.textMuted),
           ),
         ),
         SizedBox(
@@ -156,10 +147,7 @@ class _SuggestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => CreateChoiceSheet.show(
-        context,
-        initialDestination: place.toPlace(),
-      ),
+      onTap: () => PlanPreviewSheet.show(context, place),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: DestinationPhoto(

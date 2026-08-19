@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "575153542992",
+    "project_id": "plansync-ps2026",
+    "storage_bucket": "plansync-ps2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:575153542992:android:7e9c314e963ab2a4ce7e55",
+        "android_client_info": {
+          "package_name": "com.example.plansync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDc8wSCtsB0AJPgGll71J-ALSkesMPv_Yk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

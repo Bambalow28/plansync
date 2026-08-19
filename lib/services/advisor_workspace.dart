@@ -1,5 +1,7 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../data/advisors.dart';
 import '../models/place.dart';
 
@@ -20,6 +22,8 @@ enum RequestState { pending, accepted, declined }
 
 class PlanRequest {
   final String id;
+  final String travellerId;
+  final String advisorId;
   final String travellerName;
   final Place destination;
   final DateTime start;
@@ -28,15 +32,14 @@ class PlanRequest {
   final int budget;
   final String currency;
   final String message;
-
-  /// Days ago the request came in — fixed offsets rather than stored dates so
-  /// the mockup never shows a request from the future.
-  final int daysAgo;
+  final DateTime createdAt;
 
   RequestState state;
 
   PlanRequest({
     required this.id,
+    required this.travellerId,
+    required this.advisorId,
     required this.travellerName,
     required this.destination,
     required this.start,
@@ -45,16 +48,40 @@ class PlanRequest {
     required this.budget,
     required this.currency,
     required this.message,
-    required this.daysAgo,
+    required this.createdAt,
     this.state = RequestState.pending,
   });
 
   int get nights => end.difference(start).inDays;
+  int get daysAgo => DateTime.now().difference(createdAt).inDays;
+
+  factory PlanRequest.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data();
+    return PlanRequest(
+      id: doc.id,
+      travellerId: (d['travellerId'] ?? '') as String,
+      advisorId: (d['advisorId'] ?? '') as String,
+      travellerName: (d['travellerName'] ?? '') as String,
+      destination: Place.fromJson((d['destination'] as Map?)?.cast<String, dynamic>() ?? const {}),
+      start: (d['start'] as Timestamp).toDate(),
+      end: (d['end'] as Timestamp).toDate(),
+      partySize: (d['partySize'] as num?)?.toInt() ?? 1,
+      budget: (d['budget'] as num?)?.toInt() ?? 0,
+      currency: (d['currency'] ?? 'USD') as String,
+      message: (d['message'] ?? '') as String,
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      state: RequestState.values.firstWhere(
+        (s) => s.name == d['state'],
+        orElse: () => RequestState.pending,
+      ),
+    );
+  }
 }
 
 /// A place on the advisor's own travel list, with the switch that decides
 /// whether travellers see it.
 class MyPlace {
+  final String id;
   final String city;
   final String country;
   final String countryCode;
@@ -63,6 +90,7 @@ class MyPlace {
   bool shown;
 
   MyPlace({
+    required this.id,
     required this.city,
     required this.country,
     required this.countryCode,
@@ -70,6 +98,19 @@ class MyPlace {
     required this.note,
     this.shown = true,
   });
+
+  factory MyPlace.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data();
+    return MyPlace(
+      id: doc.id,
+      city: (d['city'] ?? '') as String,
+      country: (d['country'] ?? '') as String,
+      countryCode: (d['countryCode'] ?? '') as String,
+      year: (d['year'] as num?)?.toInt() ?? DateTime.now().year,
+      note: (d['note'] ?? '') as String,
+      shown: (d['shown'] as bool?) ?? true,
+    );
+  }
 
   AdvisorPlace toAdvisorPlace() => AdvisorPlace(
     city: city,
@@ -82,122 +123,40 @@ class MyPlace {
   String get label => '$city, $country';
 }
 
-/// The signed-in advisor's own editable record.
+/// The signed-in advisor's own editable record, backed by Firestore.
 ///
-/// ponytail: mockup state. Everything but [AdvisorStatus] lives in memory for
-/// the session — edits feel real while you are in the app and reset on
-/// relaunch. There is no backend, no account, and no owner-review pipeline to
-/// persist any of this to; wiring those is the next piece of work, not this
-/// one.
+/// `advisors/{uid}` holds [status] and the profile fields; `advisors/{uid}/
+/// places` holds [places]; `requests` (queried by `advisorId`) holds
+/// [requests]. All three are live snapshots — an edit elsewhere (or by the
+/// owner, for [status]) shows up here without a reload.
+///
+/// ponytail: no owner-review pipeline yet — applications are approved by hand
+/// in the Firebase console, not through the app.
 class AdvisorWorkspace extends ChangeNotifier {
   AdvisorWorkspace._();
   static final AdvisorWorkspace instance = AdvisorWorkspace._();
 
-  static const _statusKey = 'advisor_status_v1';
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _docSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _placesSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _requestsSub;
 
   AdvisorStatus _status = AdvisorStatus.none;
   AdvisorStatus get status => _status;
 
-  // Seeded so an approved advisor has something to edit rather than an empty
-  // shell — the mockup is about the shape of the work, not data entry.
-  String name = 'Alex Rivera';
-  Place? city = const Place(city: 'Lisbon', country: 'Portugal', countryCode: 'PT');
-  String headline = 'Tiled streets, long lunches, and the Atlantic light';
-  String bio =
-      'I moved to Lisbon nine years ago for a six-month contract and never left. '
-      'I plan trips that follow the light — which miradouro at which hour, where '
-      'to eat when the tourist places close, and the day trip that is worth the '
-      'train.';
-  List<String> languages = ['Portuguese', 'English', 'Spanish'];
-  int pricePerPlan = 120;
-  int yearsExperience = 9;
+  String name = '';
+  Place? city;
+  String headline = '';
+  String bio = '';
+  List<String> languages = [];
+  int pricePerPlan = 0;
+  int yearsExperience = 0;
+  double rating = 0;
+  int reviewsCount = 0;
+  int tripsPlanned = 0;
 
-  final List<MyPlace> places = [
-    MyPlace(
-      city: 'Lisbon',
-      country: 'Portugal',
-      countryCode: 'PT',
-      year: 2026,
-      note: 'Home. Still walking a new street most weeks.',
-    ),
-    MyPlace(
-      city: 'Porto',
-      country: 'Portugal',
-      countryCode: 'PT',
-      year: 2025,
-      note: 'The right overnight trip, not a rushed day trip.',
-    ),
-    MyPlace(
-      city: 'Seville',
-      country: 'Spain',
-      countryCode: 'ES',
-      year: 2025,
-      note: 'Go in spring or not at all.',
-    ),
-    MyPlace(
-      city: 'Tangier',
-      country: 'Morocco',
-      countryCode: 'MA',
-      year: 2024,
-      note: 'A ferry and a different continent by lunchtime.',
-      shown: false,
-    ),
-    MyPlace(
-      city: 'Madeira',
-      country: 'Portugal',
-      countryCode: 'PT',
-      year: 2023,
-      note: 'Levada walks, and the only place I have been rained on happily.',
-      shown: false,
-    ),
-  ];
-
-  final List<PlanRequest> requests = [
-    PlanRequest(
-      id: 'r1',
-      travellerName: 'Priya Nair',
-      destination: const Place(city: 'Lisbon', country: 'Portugal', countryCode: 'PT'),
-      start: DateTime(2026, 9, 12),
-      end: DateTime(2026, 9, 19),
-      partySize: 2,
-      budget: 3200,
-      currency: 'EUR',
-      message:
-          'First time in Portugal, travelling with my partner. We would rather '
-          'eat well and walk a lot than tick off sights. Is a day in Sintra '
-          'worth it or is that a trap?',
-      daysAgo: 1,
-    ),
-    PlanRequest(
-      id: 'r2',
-      travellerName: 'Tom Whitfield',
-      destination: const Place(city: 'Porto', country: 'Portugal', countryCode: 'PT'),
-      start: DateTime(2026, 10, 3),
-      end: DateTime(2026, 10, 7),
-      partySize: 4,
-      budget: 2600,
-      currency: 'EUR',
-      message:
-          'Four of us, all mid-thirties, going for my brother\'s birthday. We '
-          'want one really good dinner and otherwise something loose.',
-      daysAgo: 3,
-    ),
-    PlanRequest(
-      id: 'r3',
-      travellerName: 'Marta Kowalski',
-      destination: const Place(city: 'Lisbon', country: 'Portugal', countryCode: 'PT'),
-      start: DateTime(2026, 11, 20),
-      end: DateTime(2026, 11, 27),
-      partySize: 1,
-      budget: 1800,
-      currency: 'EUR',
-      message:
-          'Solo, working remotely in the mornings. I need somewhere to be that '
-          'is not my hotel room, and a reason to leave the city on the weekend.',
-      daysAgo: 6,
-      state: RequestState.accepted,
-    ),
-  ];
+  List<MyPlace> places = [];
+  List<PlanRequest> requests = [];
 
   int get pendingRequestCount =>
       requests.where((r) => r.state == RequestState.pending).length;
@@ -207,31 +166,100 @@ class AdvisorWorkspace extends ChangeNotifier {
       if (p.shown) p,
   ];
 
-  /// Reads the saved application status. Called from `main()`.
+  CollectionReference<Map<String, dynamic>> get _advisors =>
+      FirebaseFirestore.instance.collection('advisors');
+
+  /// Starts following the signed-in user's advisor doc, places, and requests.
+  /// Called from `main()`; keeps listening across sign-in/out.
   Future<void> load() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_statusKey);
+    _authSub = FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
+  }
+
+  void _onAuthChanged(User? user) {
+    _docSub?.cancel();
+    _placesSub?.cancel();
+    _requestsSub?.cancel();
+    if (user == null) {
+      _status = AdvisorStatus.none;
+      places = [];
+      requests = [];
+      notifyListeners();
+      return;
+    }
+
+    final ref = _advisors.doc(user.uid);
+    _docSub = ref.snapshots().listen((doc) {
+      final data = doc.data();
       _status = AdvisorStatus.values.firstWhere(
-        (s) => s.name == raw,
+        (s) => s.name == data?['status'],
         orElse: () => AdvisorStatus.none,
       );
-    } catch (e) {
-      debugPrint('Advisor status load failed: $e');
-    }
+      if (data != null) {
+        name = (data['name'] as String?) ?? name;
+        headline = (data['headline'] as String?) ?? headline;
+        bio = (data['bio'] as String?) ?? bio;
+        pricePerPlan = (data['pricePerPlan'] as num?)?.toInt() ?? pricePerPlan;
+        yearsExperience = (data['yearsExperience'] as num?)?.toInt() ?? yearsExperience;
+        rating = (data['rating'] as num?)?.toDouble() ?? rating;
+        reviewsCount = (data['reviewsCount'] as num?)?.toInt() ?? reviewsCount;
+        tripsPlanned = (data['tripsPlanned'] as num?)?.toInt() ?? tripsPlanned;
+        final rawLanguages = data['languages'];
+        if (rawLanguages is List) languages = rawLanguages.cast<String>();
+        final cityData = data['city'];
+        if (cityData is Map) city = Place.fromJson(cityData.cast<String, dynamic>());
+      }
+      notifyListeners();
+    }, onError: (e) => debugPrint('Advisor doc stream failed: $e'));
+
+    _placesSub = ref.collection('places').snapshots().listen((snap) {
+      places = snap.docs.map(MyPlace.fromDoc).toList()
+        ..sort((a, b) => b.year.compareTo(a.year));
+      notifyListeners();
+    }, onError: (e) => debugPrint('Advisor places stream failed: $e'));
+
+    _requestsSub = FirebaseFirestore.instance
+        .collection('requests')
+        .where('advisorId', isEqualTo: user.uid)
+        .snapshots()
+        .listen((snap) {
+      requests = snap.docs.map(PlanRequest.fromDoc).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      notifyListeners();
+    }, onError: (e) => debugPrint('Advisor requests stream failed: $e'));
   }
 
-  Future<void> setStatus(AdvisorStatus status) async {
-    _status = status;
-    notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_statusKey, status.name);
-    } catch (e) {
-      debugPrint('Advisor status save failed: $e');
+  /// Writes an application to `advisors/{uid}`, moving [status] to pending.
+  /// Throws if nobody is signed in — callers must gate on [AuthService].
+  Future<void> submitApplication({
+    required String name,
+    required String email,
+    required String headline,
+    required String bio,
+    Place? city,
+    required bool allAround,
+    int? yearsExperience,
+    int? pricePerPlan,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Must be signed in to apply as an advisor.');
     }
+    await _advisors.doc(uid).set({
+      'status': AdvisorStatus.pending.name,
+      'name': name,
+      'email': email,
+      'headline': headline,
+      'bio': bio,
+      'city': city?.toJson(),
+      'allAround': allAround,
+      'yearsExperience': yearsExperience,
+      'pricePerPlan': pricePerPlan,
+      'submittedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
+  /// Local-only edit, for the profile editor's live preview — call
+  /// [persistProfile] to actually save it.
   void updateProfile({
     String? headline,
     String? bio,
@@ -247,14 +275,53 @@ class AdvisorWorkspace extends ChangeNotifier {
     notifyListeners();
   }
 
-  void togglePlace(MyPlace place, bool shown) {
-    place.shown = shown;
-    notifyListeners();
+  /// Saves the current in-memory profile fields to `advisors/{uid}`.
+  Future<void> persistProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await _advisors.doc(uid).set({
+      'headline': headline,
+      'bio': bio,
+      'pricePerPlan': pricePerPlan,
+      'languages': languages,
+      'city': city?.toJson(),
+    }, SetOptions(merge: true));
   }
 
-  void setRequestState(PlanRequest request, RequestState state) {
+  Future<void> addPlace({
+    required String city,
+    required String country,
+    required String countryCode,
+    required int year,
+    required String note,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await _advisors.doc(uid).collection('places').add({
+      'city': city,
+      'country': country,
+      'countryCode': countryCode,
+      'year': year,
+      'note': note,
+      'shown': true,
+    });
+  }
+
+  Future<void> togglePlace(MyPlace place, bool shown) async {
+    place.shown = shown;
+    notifyListeners();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    await _advisors.doc(uid).collection('places').doc(place.id).update({'shown': shown});
+  }
+
+  Future<void> setRequestState(PlanRequest request, RequestState state) async {
     request.state = state;
     notifyListeners();
+    await FirebaseFirestore.instance
+        .collection('requests')
+        .doc(request.id)
+        .update({'state': state.name});
   }
 
   /// The public-facing record travellers would see — lets the dashboard preview
@@ -265,12 +332,21 @@ class AdvisorWorkspace extends ChangeNotifier {
     city: city,
     headline: headline,
     bio: bio,
-    rating: 4.9,
-    reviews: 36,
+    rating: rating,
+    reviews: reviewsCount,
     pricePerPlan: pricePerPlan,
-    tripsPlanned: 48,
+    tripsPlanned: tripsPlanned,
     yearsExperience: yearsExperience,
     languages: languages,
     places: [for (final p in shownPlaces) p.toAdvisorPlace()],
   );
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    _docSub?.cancel();
+    _placesSub?.cancel();
+    _requestsSub?.cancel();
+    super.dispose();
+  }
 }

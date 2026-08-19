@@ -1,0 +1,33 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "plansync-ps2026",
+          "appId": "1:575153542992:android:7e9c314e963ab2a4ce7e55",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "plansync-ps2026",
+          "appId": "1:575153542992:ios:51cbab3f6b3a82f6ce7e55",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "plansync-ps2026",
+          "configurations": {
+            "android": "1:575153542992:android:7e9c314e963ab2a4ce7e55",
+            "ios": "1:575153542992:ios:51cbab3f6b3a82f6ce7e55"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

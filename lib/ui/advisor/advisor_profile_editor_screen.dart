@@ -42,13 +42,15 @@ class _AdvisorProfileEditorScreenState extends State<AdvisorProfileEditorScreen>
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     _workspace.updateProfile(
       headline: _headline.text.trim(),
       bio: _bio.text.trim(),
       pricePerPlan: int.tryParse(_rate.text.trim()) ?? _workspace.pricePerPlan,
       languages: _languages,
     );
+    await _workspace.persistProfile();
+    if (!mounted) return;
     setState(() => _dirty = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

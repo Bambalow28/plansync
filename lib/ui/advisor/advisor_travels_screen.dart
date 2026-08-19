@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../models/place.dart';
 import '../../services/advisor_workspace.dart';
 import '../../theme/app_theme.dart';
 import '../shared/destination_photo.dart';
+import '../shared/place_search_field.dart';
 import '../../models/trip.dart';
 
 /// Managing the places an advisor has been, and which ones travellers see.
@@ -42,7 +44,7 @@ class AdvisorTravelsScreen extends StatelessWidget {
                 const SizedBox(height: 14),
               ],
               const SizedBox(height: 6),
-              const _AddPlaceButton(),
+              _AddPlaceButton(workspace: workspace),
             ],
           );
         },
@@ -140,20 +142,78 @@ class _TravelRow extends StatelessWidget {
 }
 
 class _AddPlaceButton extends StatelessWidget {
-  const _AddPlaceButton();
+  final AdvisorWorkspace workspace;
+  const _AddPlaceButton({required this.workspace});
+
+  Future<void> _open(BuildContext context) async {
+    Place? place;
+    final year = TextEditingController(text: '${DateTime.now().year}');
+    final note = TextEditingController();
+
+    final add = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceHigh,
+          title: Text('Add a place', style: AppText.display(19)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PlaceSearchField(
+                hint: 'Search city — e.g. Porto',
+                onSelected: (p) => setDialogState(() => place = p),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: year,
+                keyboardType: TextInputType.number,
+                style: AppText.body(15),
+                cursorColor: AppColors.accent,
+                decoration: InputDecoration(hintText: 'Year', hintStyle: AppText.body(14, color: AppColors.textMuted)),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: note,
+                maxLines: 2,
+                style: AppText.body(15),
+                cursorColor: AppColors.accent,
+                decoration: InputDecoration(
+                  hintText: 'One line about what you know there',
+                  hintStyle: AppText.body(14, color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text('Cancel', style: AppText.body(14, color: AppColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: place == null ? null : () => Navigator.pop(dialogContext, true),
+              child: Text('Add', style: AppText.body(14, color: AppColors.accent)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (add == true && place != null) {
+      await workspace.addPlace(
+        city: place!.city,
+        country: place!.country,
+        countryCode: place!.countryCode,
+        year: int.tryParse(year.text.trim()) ?? DateTime.now().year,
+        note: note.text.trim(),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surfaceHigh,
-          content: Text(
-            'Adding places comes with the real advisor backend.',
-            style: AppText.body(13),
-          ),
-        ),
-      ),
+      onTap: () => _open(context),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 15),
         alignment: Alignment.center,

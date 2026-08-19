@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../controllers/trip_controller.dart';
+import '../../data/suggested_places.dart';
 import '../../models/place.dart';
 import '../../models/trip.dart';
 import '../../theme/app_theme.dart';
@@ -16,12 +17,23 @@ class AddTripSheet extends StatefulWidget {
   /// already picked. Ignored when editing an existing trip.
   final Place? initialDestination;
 
-  const AddTripSheet({super.key, this.existing, this.initialDestination});
+  /// A trending plan the user chose to start with — pre-fills the budget and,
+  /// once dates are picked, fills the trip's first days from its template.
+  /// Ignored when editing an existing trip.
+  final SuggestedPlace? planSource;
+
+  const AddTripSheet({
+    super.key,
+    this.existing,
+    this.initialDestination,
+    this.planSource,
+  });
 
   static Future<void> show(
     BuildContext context, {
     Trip? existing,
     Place? initialDestination,
+    SuggestedPlace? planSource,
   }) {
     return Navigator.push(
       context,
@@ -29,6 +41,7 @@ class AddTripSheet extends StatefulWidget {
         builder: (_) => AddTripSheet(
           existing: existing,
           initialDestination: initialDestination,
+          planSource: planSource,
         ),
       ),
     );
@@ -53,12 +66,17 @@ class _AddTripSheetState extends State<AddTripSheet> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    // A trip started from a chosen place gets that city as its working name —
-    // the user can still edit it before saving.
-    _name = TextEditingController(text: e?.name ?? widget.initialDestination?.city ?? '');
-    _destination = e?.destination ?? widget.initialDestination;
+    final plan = widget.planSource;
+    // A trip started from a chosen place (or a plan) gets that city as its
+    // working name — the user can still edit it before saving.
+    _name = TextEditingController(
+      text: e?.name ?? widget.initialDestination?.city ?? plan?.city ?? '',
+    );
+    _destination = e?.destination ?? widget.initialDestination ?? plan?.toPlace();
     _budget = TextEditingController(
-      text: e != null ? moneyInput(e.budget) : '',
+      text: e != null
+          ? moneyInput(e.budget)
+          : (plan != null ? moneyInput(plan.planBudget) : ''),
     );
     _start = e?.startDate;
     _end = e?.endDate;
@@ -140,7 +158,7 @@ class _AddTripSheetState extends State<AddTripSheet> {
     final budget = parseMoney(_budget.text);
     final e = widget.existing;
     if (e == null) {
-      await TripController.instance.addTrip(
+      final trip = await TripController.instance.addTrip(
         name: _name.text.trim(),
         destination: _destination,
         startDate: _start!,
@@ -149,6 +167,13 @@ class _AddTripSheetState extends State<AddTripSheet> {
         currency: _currency,
         cover: _cover,
       );
+      final plan = widget.planSource;
+      if (plan != null) {
+        await TripController.instance.addItems(
+          trip.id,
+          plan.planItinerary(trip.startDate, trip.dayCount),
+        );
+      }
     } else {
       e.name = _name.text.trim();
       e.destination = _destination;

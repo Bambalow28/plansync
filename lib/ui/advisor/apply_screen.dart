@@ -3,7 +3,6 @@ import '../../models/place.dart';
 import '../../services/advisor_workspace.dart';
 import '../../theme/app_theme.dart';
 import '../shared/place_search_field.dart';
-import 'advisor_dashboard_screen.dart';
 
 /// Applying to become an advisor.
 ///
@@ -29,6 +28,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
   Place? _city;
   bool _allAround = false;
   bool _submitted = false;
+  bool _submitting = false;
+  String? _error;
 
   @override
   void initState() {
@@ -56,8 +57,28 @@ class _ApplyScreenState extends State<ApplyScreen> {
       (_allAround || _city != null);
 
   Future<void> _submit() async {
-    await AdvisorWorkspace.instance.setStatus(AdvisorStatus.pending);
-    if (mounted) setState(() => _submitted = true);
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await AdvisorWorkspace.instance.submitApplication(
+        name: _name.text.trim(),
+        email: _email.text.trim(),
+        headline: _headline.text.trim(),
+        bio: _bio.text.trim(),
+        city: _city,
+        allAround: _allAround,
+        yearsExperience: int.tryParse(_years.text.trim()),
+        pricePerPlan: int.tryParse(_rate.text.trim()),
+      );
+      if (mounted) setState(() => _submitted = true);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not send your application. Try again.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -161,7 +182,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
         ),
 
         const SizedBox(height: 34),
-        _SubmitButton(enabled: _valid, onTap: _submit),
+        if (_error != null) ...[
+          Text(_error!, style: AppText.body(13, color: AppColors.warning)),
+          const SizedBox(height: 10),
+        ],
+        _SubmitButton(enabled: _valid && !_submitting, onTap: _submit),
         const SizedBox(height: 14),
         Text(
           'You can add the places you have travelled once you are approved.',
@@ -291,9 +316,7 @@ class _SubmitButton extends StatelessWidget {
   }
 }
 
-/// Post-submit state. Says plainly that a person reads this, and carries the
-/// mockup's approval shortcut so both sides of the flow can be walked through
-/// without a backend.
+/// Post-submit state. Says plainly that a person reads this.
 class _SubmittedView extends StatelessWidget {
   const _SubmittedView();
 
@@ -327,69 +350,7 @@ class _SubmittedView extends StatelessWidget {
           textAlign: TextAlign.center,
           style: AppText.body(14, color: AppColors.textSecondary).copyWith(height: 1.5),
         ),
-        const SizedBox(height: 36),
-        const _MockupApprovalShortcut(),
       ],
-    );
-  }
-}
-
-/// Mockup scaffolding, labelled as such so it is never mistaken for product.
-/// Real approval is the owner's decision on a server that does not exist yet.
-class _MockupApprovalShortcut extends StatelessWidget {
-  const _MockupApprovalShortcut();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLow,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.hairline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('MOCKUP ONLY', style: AppText.label(9, color: AppColors.warning)),
-          const SizedBox(height: 8),
-          Text(
-            'There is no server to review this, so nothing was sent. Jump to the '
-            'approved state to see the advisor dashboard.',
-            style: AppText.body(13, color: AppColors.textSecondary).copyWith(height: 1.45),
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: () async {
-              await AdvisorWorkspace.instance.setStatus(AdvisorStatus.approved);
-              if (!context.mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AdvisorDashboardScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(11),
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.45)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Simulate approval',
-                    style: AppText.body(13, color: AppColors.accent, weight: FontWeight.w600),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_rounded, size: 15, color: AppColors.accent),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

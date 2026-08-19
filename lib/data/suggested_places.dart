@@ -1,15 +1,22 @@
+import '../models/category.dart';
+import '../models/itinerary_item.dart';
 import '../models/place.dart';
 import '../models/trip.dart';
 
 /// Broad buckets used to bias suggestions toward the user's part of the world.
 enum Region { asia, europe, americas, africa, oceania }
 
-/// A curated destination for the home-screen carousel.
+/// A curated destination for the home-screen carousel, doubling as a
+/// ready-made plan: [planDays]/[planBudget] are what "Start with this plan"
+/// pre-fills, and [planItinerary] is the generic day-by-day fill applied on
+/// top of whatever dates the user actually picks.
 ///
 /// ponytail: this is a hand-maintained list, not a real popularity signal —
 /// there's no backend and no usage analytics to derive one from. [months] is
-/// "when is this place at its best", not measured demand. Replace the whole
-/// file with a fetched feed once creators and a backend exist.
+/// "when is this place at its best", not measured demand, and [planItinerary]
+/// is a generic arrive/explore/depart shape, not a real day-by-day plan for
+/// that city. Replace the whole file with a fetched feed (real plans, real
+/// itineraries) once creators and a backend exist.
 class SuggestedPlace {
   final String city;
   final String country;
@@ -25,6 +32,12 @@ class SuggestedPlace {
   /// Gradient shown instead of a photo when offline or unconfigured.
   final TripCover cover;
 
+  /// Length of the pre-made plan, in days.
+  final int planDays;
+
+  /// Estimated total budget for the plan, in USD.
+  final double planBudget;
+
   const SuggestedPlace({
     required this.city,
     required this.country,
@@ -33,12 +46,38 @@ class SuggestedPlace {
     required this.months,
     required this.tagline,
     required this.cover,
+    required this.planDays,
+    required this.planBudget,
   });
 
   Place toPlace() => Place(city: city, country: country, countryCode: countryCode);
 
   /// The search text used to find this destination's photo.
   String get photoQuery => '$city $country travel';
+
+  /// Item builders for the first `min(planDays, tripDays)` days of a trip
+  /// starting on [start], shaped like [TripController.addItem]'s callback so
+  /// the caller supplies the id once ready to persist. Any days beyond
+  /// [planDays] are left for the user to fill in themselves.
+  List<ItineraryItem Function(String id)> planItinerary(DateTime start, int tripDays) {
+    final fillDays = planDays < tripDays ? planDays : tripDays;
+    return List.generate(fillDays, (i) {
+      final day = DateTime(start.year, start.month, start.day + i);
+      final String title;
+      final PlanCategory category;
+      if (i == 0) {
+        title = 'Arrive in $city';
+        category = PlanCategory.lodging;
+      } else if (i == fillDays - 1 && fillDays > 1) {
+        title = 'Depart $city';
+        category = PlanCategory.transport;
+      } else {
+        title = 'Explore $city';
+        category = PlanCategory.sightseeing;
+      }
+      return (id) => ItineraryItem(id: id, title: title, category: category, day: day);
+    });
+  }
 }
 
 const List<SuggestedPlace> kSuggestedPlaces = [
@@ -51,6 +90,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [3, 4, 5, 10, 11],
     tagline: 'Cherry blossoms and neon nights',
     cover: TripCover.sunset,
+    planDays: 6,
+    planBudget: 2200,
   ),
   SuggestedPlace(
     city: 'Kyoto',
@@ -60,6 +101,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [4, 10, 11],
     tagline: 'Temples, gardens, and autumn maples',
     cover: TripCover.forest,
+    planDays: 4,
+    planBudget: 1400,
   ),
   SuggestedPlace(
     city: 'Bangkok',
@@ -69,6 +112,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [11, 12, 1, 2],
     tagline: 'Street food capital of the world',
     cover: TripCover.sunset,
+    planDays: 5,
+    planBudget: 900,
   ),
   SuggestedPlace(
     city: 'Bali',
@@ -78,6 +123,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [4, 5, 6, 7, 8, 9],
     tagline: 'Rice terraces and volcanic coastline',
     cover: TripCover.forest,
+    planDays: 7,
+    planBudget: 1300,
   ),
   SuggestedPlace(
     city: 'Seoul',
@@ -87,6 +134,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [4, 5, 9, 10],
     tagline: 'Palaces, markets, and midnight food',
     cover: TripCover.violet,
+    planDays: 5,
+    planBudget: 1500,
   ),
   SuggestedPlace(
     city: 'Dubai',
@@ -96,6 +145,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [11, 12, 1, 2, 3],
     tagline: 'Desert dunes beside a skyline',
     cover: TripCover.sunset,
+    planDays: 4,
+    planBudget: 1800,
   ),
   // Europe
   SuggestedPlace(
@@ -106,6 +157,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [3, 4, 5, 9, 10],
     tagline: 'Tiled streets above the Atlantic',
     cover: TripCover.ocean,
+    planDays: 5,
+    planBudget: 1300,
   ),
   SuggestedPlace(
     city: 'Rome',
@@ -115,6 +168,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [4, 5, 6, 9, 10],
     tagline: 'Two thousand years, one walk',
     cover: TripCover.sunset,
+    planDays: 5,
+    planBudget: 1600,
   ),
   SuggestedPlace(
     city: 'Paris',
@@ -124,6 +179,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [4, 5, 6, 9, 10],
     tagline: 'Long lunches and longer evenings',
     cover: TripCover.violet,
+    planDays: 5,
+    planBudget: 1900,
   ),
   SuggestedPlace(
     city: 'Reykjavík',
@@ -133,6 +190,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [6, 7, 8, 9, 10, 2, 3],
     tagline: 'Northern lights and black-sand coast',
     cover: TripCover.ocean,
+    planDays: 4,
+    planBudget: 1700,
   ),
   SuggestedPlace(
     city: 'Barcelona',
@@ -142,6 +201,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [5, 6, 9, 10],
     tagline: 'Gaudí, tapas, and city beaches',
     cover: TripCover.sunset,
+    planDays: 5,
+    planBudget: 1400,
   ),
   SuggestedPlace(
     city: 'Athens',
@@ -151,6 +212,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [4, 5, 6, 9, 10],
     tagline: 'Ancient stone, island ferries',
     cover: TripCover.teal,
+    planDays: 5,
+    planBudget: 1200,
   ),
   // Americas
   SuggestedPlace(
@@ -161,6 +224,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [3, 4, 5, 10, 11],
     tagline: 'Museums, murals, and mezcal',
     cover: TripCover.sunset,
+    planDays: 4,
+    planBudget: 900,
   ),
   SuggestedPlace(
     city: 'New York',
@@ -170,6 +235,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [5, 6, 9, 10, 12],
     tagline: 'The city that sets the pace',
     cover: TripCover.slate,
+    planDays: 4,
+    planBudget: 2000,
   ),
   SuggestedPlace(
     city: 'Vancouver',
@@ -179,6 +246,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [6, 7, 8, 9],
     tagline: 'Mountains meeting the sea',
     cover: TripCover.forest,
+    planDays: 5,
+    planBudget: 1600,
   ),
   SuggestedPlace(
     city: 'Rio de Janeiro',
@@ -188,6 +257,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [12, 1, 2, 3],
     tagline: 'Beaches under the granite peaks',
     cover: TripCover.ocean,
+    planDays: 6,
+    planBudget: 1500,
   ),
   SuggestedPlace(
     city: 'Buenos Aires',
@@ -197,6 +268,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [10, 11, 3, 4],
     tagline: 'Tango, steak, and grand avenues',
     cover: TripCover.violet,
+    planDays: 5,
+    planBudget: 1100,
   ),
   SuggestedPlace(
     city: 'Cusco',
@@ -206,6 +279,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [5, 6, 7, 8, 9],
     tagline: 'The gateway to Machu Picchu',
     cover: TripCover.forest,
+    planDays: 5,
+    planBudget: 1000,
   ),
   // Africa
   SuggestedPlace(
@@ -216,6 +291,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [11, 12, 1, 2, 3],
     tagline: 'Table Mountain over two oceans',
     cover: TripCover.ocean,
+    planDays: 6,
+    planBudget: 1600,
   ),
   SuggestedPlace(
     city: 'Marrakesh',
@@ -225,6 +302,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [3, 4, 5, 10, 11],
     tagline: 'Souks, riads, and the High Atlas',
     cover: TripCover.sunset,
+    planDays: 4,
+    planBudget: 900,
   ),
   SuggestedPlace(
     city: 'Cairo',
@@ -234,6 +313,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [10, 11, 12, 1, 2, 3],
     tagline: 'Pyramids at the edge of the city',
     cover: TripCover.sunset,
+    planDays: 5,
+    planBudget: 1100,
   ),
   SuggestedPlace(
     city: 'Zanzibar City',
@@ -243,6 +324,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [6, 7, 8, 9, 10],
     tagline: 'Spice islands and turquoise water',
     cover: TripCover.teal,
+    planDays: 6,
+    planBudget: 1500,
   ),
   // Oceania
   SuggestedPlace(
@@ -253,6 +336,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [10, 11, 12, 1, 2, 3],
     tagline: 'Harbour city, endless coastline',
     cover: TripCover.ocean,
+    planDays: 6,
+    planBudget: 2200,
   ),
   SuggestedPlace(
     city: 'Queenstown',
@@ -262,6 +347,8 @@ const List<SuggestedPlace> kSuggestedPlaces = [
     months: [12, 1, 2, 6, 7, 8],
     tagline: 'Alpine lakes and every adventure',
     cover: TripCover.forest,
+    planDays: 5,
+    planBudget: 1900,
   ),
 ];
 

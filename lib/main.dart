@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'controllers/trip_controller.dart';
+import 'firebase_options.dart';
 import 'models/trip.dart';
 import 'services/advisor_workspace.dart';
 import 'services/live_activity_service.dart';
@@ -29,6 +31,7 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await TripController.instance.load();
   // Load the saved destination-photo urls before the first frame so cards that
   // already have one paint it immediately instead of resolving it again.
