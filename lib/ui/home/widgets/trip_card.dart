@@ -16,7 +16,7 @@ import '../../shared/destination_photo.dart';
 /// version put a small "View trip" button on past cards and made their body
 /// inert; a full-bleed photo already reads as one object, so a competing
 /// button inside it just shrank the target and split the affordance in two.
-/// Past trips are instead marked by a desaturated photo and a PAST chip.
+/// Past trips are instead marked by a desaturated photo and a DONE stamp.
 class TripCard extends StatelessWidget {
   final Trip trip;
   final VoidCallback onTap;
@@ -37,7 +37,10 @@ class TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseColors = tripCovers[trip.cover]!;
     final colors = dimmed
-        ? [for (final c in baseColors) Color.lerp(c, AppColors.surfaceLow, 0.78)!]
+        ? [
+            for (final c in baseColors)
+              Color.lerp(c, AppColors.surfaceLow, 0.78)!,
+          ]
         : baseColors;
 
     final ongoing = !dimmed && tripIsOngoing(trip.startDate, trip.endDate);
@@ -61,23 +64,28 @@ class TripCard extends StatelessWidget {
               dimmed: dimmed,
               child: Padding(
                 padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Stack(
                   children: [
-                    Row(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _PlaceLine(trip: trip)),
-                        const SizedBox(width: 12),
-                        _DayBadge(count: trip.dayCount, ongoing: ongoing),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _PlaceLine(trip: trip)),
+                            const SizedBox(width: 12),
+                            _DayBadge(count: trip.dayCount, ongoing: ongoing),
+                          ],
+                        ),
+                        const Spacer(),
+                        if (trip.budget > 0) ...[
+                          _BudgetProgress(trip: trip),
+                          const SizedBox(height: 10),
+                        ],
+                        _Footer(trip: trip),
                       ],
                     ),
-                    const Spacer(),
-                    if (trip.budget > 0) ...[
-                      _BudgetProgress(trip: trip),
-                      const SizedBox(height: 10),
-                    ],
-                    _Footer(trip: trip),
+                    if (dimmed) const Positioned.fill(child: _DoneStamp()),
                   ],
                 ),
               ),
@@ -125,7 +133,11 @@ class _DateLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textMuted),
+        Icon(
+          Icons.calendar_today_rounded,
+          size: 12,
+          color: AppColors.textMuted,
+        ),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
@@ -201,9 +213,56 @@ class _Footer extends StatelessWidget {
           over
               ? '${money(spent - trip.budget, trip.currency)} over'
               : '${money(trip.remaining, trip.currency)} left',
-          style: AppText.label(11, color: over ? AppColors.warning : AppColors.accent),
+          style: AppText.label(
+            11,
+            color: over ? AppColors.warning : AppColors.accent,
+          ),
         ),
       ],
+    );
+  }
+}
+
+/// A rubber-stamp "DONE" mark across a finished trip's card — reads as
+/// archived at a glance. Centered in the gap the layout already leaves
+/// between the top row and the footer, so it crosses the card at an angle
+/// without landing squarely on the day badge or the name/dates beneath it.
+class _DoneStamp extends StatelessWidget {
+  const _DoneStamp();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Transform.rotate(
+        angle: -0.24,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.55),
+              width: 2.5,
+            ),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Text(
+            'DONE',
+            style:
+                AppText.label(
+                  32,
+                  color: Colors.white.withValues(alpha: 0.55),
+                  tracking: 7,
+                ).copyWith(
+                  fontWeight: FontWeight.w700,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -211,23 +270,18 @@ class _Footer extends StatelessWidget {
 /// Day count, with the live dot pinned inside its top-left corner while the
 /// trip is actually running.
 ///
-/// The count/DAYS column hugs its own text tightly, so a dot simply
-/// Positioned over it at (0,0) sits right on top of the digit — there's no
-/// slack there to place it in. [_dotReserve] carves out real, empty corner
-/// space by insetting the text instead, so the dot has somewhere to sit that
-/// isn't already occupied by a glyph.
+/// The badge's own padding (11 horizontal, 7 vertical) is moved onto the text
+/// itself rather than the container, so that padding becomes genuinely empty
+/// space in the Stack's top-left corner — real room for the dot to sit in
+/// without growing the badge or overlapping the count/DAYS text.
 class _DayBadge extends StatelessWidget {
   final int count;
   final bool ongoing;
   const _DayBadge({required this.count, required this.ongoing});
 
-  static const _dotReserve = 11.0;
-  static const _dotInset = 2.0;
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.32),
         borderRadius: BorderRadius.circular(12),
@@ -237,22 +291,22 @@ class _DayBadge extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Padding(
-            padding: EdgeInsets.only(
-              top: ongoing ? _dotReserve : 0,
-              left: ongoing ? _dotReserve : 0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
             child: Column(
               children: [
                 Text('$count', style: AppText.display(19)),
                 Text(
                   'DAYS',
-                  style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),
+                  style: AppText.label(
+                    8,
+                    color: AppColors.textMuted,
+                    tracking: 1.5,
+                  ),
                 ),
               ],
             ),
           ),
-          if (ongoing)
-            const Positioned(left: _dotInset, top: _dotInset, child: _PulsingDot()),
+          if (ongoing) const Positioned(left: 1, top: 1, child: _PulsingDot()),
         ],
       ),
     );
@@ -268,8 +322,12 @@ class _PulsingDot extends StatefulWidget {
   State<_PulsingDot> createState() => _PulsingDotState();
 }
 
-class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  )..repeat();
 
   @override
   void dispose() {
@@ -294,14 +352,20 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
                 child: Transform.scale(
                   scale: 0.5 + t * 1.5,
                   child: Container(
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.accent.withValues(alpha: 0.5)),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.accent.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
               ),
               Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accent,
+                ),
               ),
             ],
           ),
