@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../data/advisors.dart';
 import '../../models/trip.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
-import '../shared/add_trip_sheet.dart';
+import '../auth/sign_in_screen.dart';
 import '../shared/destination_photo.dart';
+import 'request_plan_screen.dart';
 
 /// An advisor's profile: who they are, what they've seen, and one action.
 ///
@@ -16,10 +18,19 @@ class AdvisorProfileScreen extends StatelessWidget {
   final Advisor advisor;
   const AdvisorProfileScreen({super.key, required this.advisor});
 
-  void _requestPlan(BuildContext context) {
-    // No backend to send a request to yet, so the useful thing this can do is
-    // start the trip it would have produced, seeded with the advisor's city.
-    AddTripSheet.show(context, initialDestination: advisor.city);
+  Future<void> _requestPlan(BuildContext context) async {
+    if (AuthService.instance.currentUser == null) {
+      final signedIn = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const SignInScreen()),
+      );
+      if (signedIn != true || !context.mounted) return;
+    }
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RequestPlanScreen(advisor: advisor)),
+    );
   }
 
   @override

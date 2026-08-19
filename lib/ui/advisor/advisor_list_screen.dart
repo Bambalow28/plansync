@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/advisors.dart';
+import '../../services/advisor_directory_service.dart';
 import '../../theme/app_theme.dart';
 import 'advisor_profile_screen.dart';
 
@@ -9,8 +10,21 @@ import 'advisor_profile_screen.dart';
 /// across a handful of people on the same few axes — where they know, how well
 /// they're rated, what they charge — and rows put those axes in columns the eye
 /// can run straight down.
-class AdvisorListScreen extends StatelessWidget {
+class AdvisorListScreen extends StatefulWidget {
   const AdvisorListScreen({super.key});
+
+  @override
+  State<AdvisorListScreen> createState() => _AdvisorListScreenState();
+}
+
+class _AdvisorListScreenState extends State<AdvisorListScreen> {
+  late Future<List<Advisor>> _advisors;
+
+  @override
+  void initState() {
+    super.initState();
+    _advisors = AdvisorDirectoryService.instance.fetchApproved();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,33 +37,56 @@ class AdvisorListScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          itemCount: kAdvisors.length + 1,
-          separatorBuilder: (context, i) => i == 0
-              ? const SizedBox(height: 6)
-              : Divider(height: 1, thickness: 1, color: AppColors.hairline),
-          itemBuilder: (context, i) {
-            if (i == 0) {
+        child: FutureBuilder<List<Advisor>>(
+          future: _advisors,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.accent),
+              );
+            }
+            final advisors = snapshot.data ?? const [];
+            if (advisors.isEmpty) {
               return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Text(
-                  'People who know one place deeply, or many places well. '
-                  'Pick one and they will build your plan around it.',
-                  style: AppText.body(14, color: AppColors.textSecondary),
+                padding: const EdgeInsets.all(28),
+                child: Center(
+                  child: Text(
+                    'No advisors yet. Check back soon.',
+                    textAlign: TextAlign.center,
+                    style: AppText.body(14, color: AppColors.textSecondary),
+                  ),
                 ),
               );
             }
-            final advisor = kAdvisors[i - 1];
-            return _AdvisorRow(
-              advisor: advisor,
-              index: i - 1,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AdvisorProfileScreen(advisor: advisor),
-                ),
-              ),
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              itemCount: advisors.length + 1,
+              separatorBuilder: (context, i) => i == 0
+                  ? const SizedBox(height: 6)
+                  : Divider(height: 1, thickness: 1, color: AppColors.hairline),
+              itemBuilder: (context, i) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Text(
+                      'People who know one place deeply, or many places well. '
+                      'Pick one and they will build your plan around it.',
+                      style: AppText.body(14, color: AppColors.textSecondary),
+                    ),
+                  );
+                }
+                final advisor = advisors[i - 1];
+                return _AdvisorRow(
+                  advisor: advisor,
+                  index: i - 1,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdvisorProfileScreen(advisor: advisor),
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),
