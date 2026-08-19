@@ -73,18 +73,11 @@ class TripCard extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
-                    Text(
-                      trip.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.display(26),
-                    ),
-                    const SizedBox(height: 6),
-                    _DateLine(trip: trip),
                     if (trip.budget > 0) ...[
-                      const SizedBox(height: 12),
-                      _BudgetBar(trip: trip),
+                      _BudgetProgress(trip: trip),
+                      const SizedBox(height: 10),
                     ],
+                    _Footer(trip: trip),
                   ],
                 ),
               ),
@@ -147,39 +140,68 @@ class _DateLine extends StatelessWidget {
   }
 }
 
-/// Budget progress with the spent/left figures on the same line as the bar's
-/// meaning, kept to one row so the photo still has room to breathe.
-class _BudgetBar extends StatelessWidget {
+/// Just the budget progress bar — the spent/left figure moved into [_Footer],
+/// alongside the trip name and dates.
+class _BudgetProgress extends StatelessWidget {
   final Trip trip;
-  const _BudgetBar({required this.trip});
+  const _BudgetProgress({required this.trip});
 
   @override
   Widget build(BuildContext context) {
     final spent = trip.spent;
     final ratio = (spent / trip.budget).clamp(0.0, 1.0);
     final over = spent > trip.budget;
-    return Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: 5,
-            backgroundColor: Colors.black.withValues(alpha: 0.35),
-            valueColor: AlwaysStoppedAnimation(
-              over ? AppColors.warning : AppColors.accent,
-            ),
-          ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: ratio,
+        minHeight: 5,
+        backgroundColor: Colors.black.withValues(alpha: 0.35),
+        valueColor: AlwaysStoppedAnimation(
+          over ? AppColors.warning : AppColors.accent,
         ),
-        const SizedBox(height: 7),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            over
-                ? '${money(spent - trip.budget, trip.currency)} over'
-                : '${money(trip.remaining, trip.currency)} left',
-            style: AppText.label(10, color: over ? AppColors.warning : AppColors.accent),
-          ),
+      ),
+    );
+  }
+}
+
+/// Trip name and dates, bottom-left. When a budget is set, the remaining (or
+/// over) figure sits opposite them on the same line — the spot the "spent"
+/// half of the budget line used to occupy.
+class _Footer extends StatelessWidget {
+  final Trip trip;
+  const _Footer({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final nameAndDate = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          trip.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.display(trip.budget > 0 ? 21 : 26),
+        ),
+        const SizedBox(height: 6),
+        _DateLine(trip: trip),
+      ],
+    );
+    if (trip.budget <= 0) return nameAndDate;
+
+    final spent = trip.spent;
+    final over = spent > trip.budget;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(child: nameAndDate),
+        const SizedBox(width: 10),
+        Text(
+          over
+              ? '${money(spent - trip.budget, trip.currency)} over'
+              : '${money(trip.remaining, trip.currency)} left',
+          style: AppText.label(11, color: over ? AppColors.warning : AppColors.accent),
         ),
       ],
     );
@@ -214,7 +236,7 @@ class _DayBadge extends StatelessWidget {
               ),
             ],
           ),
-          if (ongoing) const Positioned(left: -2, top: -2, child: _PulsingDot()),
+          if (ongoing) const Positioned(left: 3, top: 3, child: _PulsingDot()),
         ],
       ),
     );

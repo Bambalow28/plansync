@@ -52,7 +52,6 @@ class TripTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = tripCovers[trip.cover]!;
     final topInset = MediaQuery.of(context).padding.top;
-    final flag = trip.destination != null ? flagEmoji(trip.destination!.countryCode) : '';
     return Container(
       padding: EdgeInsets.fromLTRB(4, topInset + 6, 8, 14),
       decoration: BoxDecoration(
@@ -108,13 +107,8 @@ class TripTopBar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 2, 12, 0),
             child: Row(
               children: [
-                if (flag.isNotEmpty) ...[
-                  Text(flag, style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                ] else ...[
-                  Icon(Icons.place_rounded, size: 13, color: AppColors.textSecondary),
-                  const SizedBox(width: 4),
-                ],
+                Icon(Icons.place_rounded, size: 13, color: AppColors.textSecondary),
+                const SizedBox(width: 4),
                 Flexible(
                   child: Text(
                     trip.hasDestination ? trip.destinationLabel : 'No destination selected',

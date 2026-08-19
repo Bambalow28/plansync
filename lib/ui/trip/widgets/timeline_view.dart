@@ -284,17 +284,26 @@ class _TimelineViewState extends State<TimelineView> with SingleTickerProviderSt
 
     // A trip in progress gets a live marker at the current moment — purely a
     // visual overlay row, not a real plan, so it never affects the
-    // spine/container/branch math above.
+    // spine/container/branch math above. When "now" lands on the same minute
+    // as an existing plan node, that would-be marker's line/label are
+    // redundant with the plan already sitting right there — recolor that
+    // node instead of drawing a second one on top of it.
     if (_isToday(day)) {
       final nowClamped = now.isBefore(ds) ? ds : (now.isAfter(de) ? de : now);
-      anchors.add(_Anchor(
-        time: nowClamped,
-        order: 2,
-        gutter: const SizedBox.shrink(),
-        content: _NowContent(time: timeLabel(nowClamped.hour * 60 + nowClamped.minute)),
-        nodeColor: AppColors.warning,
-        filled: true,
-      ));
+      final nowMinute = nowClamped.hour * 60 + nowClamped.minute;
+      final hitIndex = anchors.indexWhere((a) => a.time.hour * 60 + a.time.minute == nowMinute);
+      if (hitIndex != -1) {
+        anchors[hitIndex] = anchors[hitIndex].copyWith(nodeColor: AppColors.warning);
+      } else {
+        anchors.add(_Anchor(
+          time: nowClamped,
+          order: 2,
+          gutter: const SizedBox.shrink(),
+          content: _NowContent(time: timeLabel(nowClamped.hour * 60 + nowClamped.minute)),
+          nodeColor: AppColors.warning,
+          filled: true,
+        ));
+      }
     }
 
     anchors.sort((a, b) {
@@ -375,6 +384,17 @@ class _Anchor {
     this.branch = false,
     this.done = false,
   });
+
+  _Anchor copyWith({Color? nodeColor}) => _Anchor(
+    time: time,
+    order: order,
+    gutter: gutter,
+    content: content,
+    nodeColor: nodeColor ?? this.nodeColor,
+    filled: filled,
+    branch: branch,
+    done: done,
+  );
 }
 
 class _Line {
@@ -613,15 +633,19 @@ class _NowContent extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            top: _lineY - 0.5,
+            top: _lineY - 7.5,
             left: 0,
             right: 0,
-            child: Container(height: 1, color: AppColors.warning.withValues(alpha: 0.65)),
-          ),
-          Positioned(
-            top: _lineY - 7.5,
-            left: 10,
-            child: Text('NOW · $time', style: AppText.label(10, color: AppColors.warning, tracking: 0.8)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text('NOW · $time', style: AppText.label(10, color: AppColors.warning, tracking: 0.8)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(height: 1, color: AppColors.warning.withValues(alpha: 0.65)),
+                ),
+              ],
+            ),
           ),
         ],
       ),
