@@ -394,13 +394,6 @@ class _GreetingBlock extends StatelessWidget {
   final List<Trip> trips;
   const _GreetingBlock({required this.trips});
 
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   @override
   Widget build(BuildContext context) {
     final upcoming = trips.where((t) => t.endDate.isAfter(DateTime.now())).length;
@@ -409,8 +402,6 @@ class _GreetingBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_greeting, style: AppText.label(12, color: AppColors.textMuted)),
-          const SizedBox(height: 4),
           Text('Your trips', style: AppText.display(34)),
           const SizedBox(height: 6),
           AnimatedSwitcher(

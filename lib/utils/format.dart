@@ -80,25 +80,4 @@ bool tripIsOngoing(DateTime start, DateTime end, {DateTime? now}) {
   return !s.isAfter(today) && !e.isBefore(today);
 }
 
-/// Short "days remaining" status for a trip, relative to [now] (defaults to
-/// today). Used on trip cards in place of a plan count.
-String tripCountdownLabel(DateTime start, DateTime end, {DateTime? now}) {
-  final today = _dateOnly(now ?? DateTime.now());
-  final s = _dateOnly(start);
-  final e = _dateOnly(end);
-  if (e.isBefore(today)) return 'Ended';
-  if (!s.isAfter(today) && !e.isBefore(today)) {
-    // In progress — the pulsing dot next to this text already signals
-    // "ongoing", so the label itself only needs the day count.
-    final left = e.difference(today).inDays;
-    if (left == 0) return 'Last day';
-    return '$left day${left == 1 ? '' : 's'} left';
-  }
-  // Upcoming.
-  final until = s.difference(today).inDays;
-  if (until == 0) return 'Starts today';
-  if (until == 1) return 'Tomorrow';
-  return 'In $until days';
-}
-
 DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);

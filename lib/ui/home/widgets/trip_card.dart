@@ -80,7 +80,7 @@ class TripCard extends StatelessWidget {
                       style: AppText.display(26),
                     ),
                     const SizedBox(height: 6),
-                    _DateLine(trip: trip, ongoing: ongoing, dimmed: dimmed),
+                    _DateLine(trip: trip),
                     if (trip.budget > 0) ...[
                       const SizedBox(height: 12),
                       _BudgetBar(trip: trip),
@@ -122,12 +122,11 @@ class _PlaceLine extends StatelessWidget {
   }
 }
 
-/// Dates, plus the countdown (and live dot) while the trip still lies ahead.
+/// Dates — the countdown lives on the day badge, top-right, so it isn't
+/// repeated here.
 class _DateLine extends StatelessWidget {
   final Trip trip;
-  final bool ongoing;
-  final bool dimmed;
-  const _DateLine({required this.trip, required this.ongoing, required this.dimmed});
+  const _DateLine({required this.trip});
 
   @override
   Widget build(BuildContext context) {
@@ -143,14 +142,6 @@ class _DateLine extends StatelessWidget {
             style: AppText.label(12, color: AppColors.textSecondary),
           ),
         ),
-        // A finished trip has no countdown left to run.
-        if (!dimmed) ...[
-          const Spacer(),
-          Text(
-            tripCountdownLabel(trip.startDate, trip.endDate),
-            style: AppText.label(12, color: ongoing ? AppColors.accent : AppColors.textSecondary),
-          ),
-        ],
       ],
     );
   }
@@ -181,28 +172,22 @@ class _BudgetBar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 7),
-        Row(
-          children: [
-            Text(
-              '${money(spent, trip.currency)} spent',
-              style: AppText.label(10, color: AppColors.textSecondary),
-            ),
-            const Spacer(),
-            Text(
-              over
-                  ? '${money(spent - trip.budget, trip.currency)} over'
-                  : '${money(trip.remaining, trip.currency)} left',
-              style: AppText.label(10, color: over ? AppColors.warning : AppColors.accent),
-            ),
-          ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            over
+                ? '${money(spent - trip.budget, trip.currency)} over'
+                : '${money(trip.remaining, trip.currency)} left',
+            style: AppText.label(10, color: over ? AppColors.warning : AppColors.accent),
+          ),
         ),
       ],
     );
   }
 }
 
-/// Day count, with the live dot pinned to its top-left corner while the trip
-/// is actually running.
+/// Day count, with the live dot pinned inside its top-left corner while the
+/// trip is actually running.
 class _DayBadge extends StatelessWidget {
   final int count;
   final bool ongoing;
@@ -210,32 +195,28 @@ class _DayBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badge = Container(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.32),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
-      child: Column(
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Text('$count', style: AppText.display(19)),
-          Text(
-            'DAYS',
-            style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),
+          Column(
+            children: [
+              Text('$count', style: AppText.display(19)),
+              Text(
+                'DAYS',
+                style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),
+              ),
+            ],
           ),
+          if (ongoing) const Positioned(left: -2, top: -2, child: _PulsingDot()),
         ],
       ),
-    );
-    if (!ongoing) return badge;
-    // Clipping is off by default on Stack, so the dot can sit proud of the
-    // badge's corner rather than being trimmed by it.
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        badge,
-        const Positioned(left: -5, top: -5, child: _PulsingDot()),
-      ],
     );
   }
 }
