@@ -210,10 +210,19 @@ class _Footer extends StatelessWidget {
 
 /// Day count, with the live dot pinned inside its top-left corner while the
 /// trip is actually running.
+///
+/// The count/DAYS column hugs its own text tightly, so a dot simply
+/// Positioned over it at (0,0) sits right on top of the digit — there's no
+/// slack there to place it in. [_dotReserve] carves out real, empty corner
+/// space by insetting the text instead, so the dot has somewhere to sit that
+/// isn't already occupied by a glyph.
 class _DayBadge extends StatelessWidget {
   final int count;
   final bool ongoing;
   const _DayBadge({required this.count, required this.ongoing});
+
+  static const _dotReserve = 11.0;
+  static const _dotInset = 2.0;
 
   @override
   Widget build(BuildContext context) {
@@ -227,16 +236,23 @@ class _DayBadge extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Column(
-            children: [
-              Text('$count', style: AppText.display(19)),
-              Text(
-                'DAYS',
-                style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),
-              ),
-            ],
+          Padding(
+            padding: EdgeInsets.only(
+              top: ongoing ? _dotReserve : 0,
+              left: ongoing ? _dotReserve : 0,
+            ),
+            child: Column(
+              children: [
+                Text('$count', style: AppText.display(19)),
+                Text(
+                  'DAYS',
+                  style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),
+                ),
+              ],
+            ),
           ),
-          if (ongoing) const Positioned(left: 3, top: 3, child: _PulsingDot()),
+          if (ongoing)
+            const Positioned(left: _dotInset, top: _dotInset, child: _PulsingDot()),
         ],
       ),
     );

@@ -293,7 +293,7 @@ class _TimelineViewState extends State<TimelineView> with SingleTickerProviderSt
       final nowMinute = nowClamped.hour * 60 + nowClamped.minute;
       final hitIndex = anchors.indexWhere((a) => a.time.hour * 60 + a.time.minute == nowMinute);
       if (hitIndex != -1) {
-        anchors[hitIndex] = anchors[hitIndex].copyWith(nodeColor: AppColors.warning);
+        anchors[hitIndex] = anchors[hitIndex].copyWith(nodeColor: AppColors.warning, filled: true);
       } else {
         anchors.add(_Anchor(
           time: nowClamped,
@@ -385,13 +385,13 @@ class _Anchor {
     this.done = false,
   });
 
-  _Anchor copyWith({Color? nodeColor}) => _Anchor(
+  _Anchor copyWith({Color? nodeColor, bool? filled}) => _Anchor(
     time: time,
     order: order,
     gutter: gutter,
     content: content,
     nodeColor: nodeColor ?? this.nodeColor,
-    filled: filled,
+    filled: filled ?? this.filled,
     branch: branch,
     done: done,
   );
