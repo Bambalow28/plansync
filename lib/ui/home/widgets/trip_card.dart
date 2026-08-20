@@ -227,12 +227,13 @@ class _Footer extends StatelessWidget {
 }
 
 /// Days until the trip starts, with the live dot pinned inside its top-left
-/// corner while the trip is actually running.
+/// corner while the trip is actually running — swapped for an "IN PROGRESS"
+/// label once it is, since a countdown to a trip already underway reads as 0.
 ///
 /// The badge's own padding (11 horizontal, 7 vertical) is moved onto the text
 /// itself rather than the container, so that padding becomes genuinely empty
 /// space in the Stack's top-left corner — real room for the dot to sit in
-/// without growing the badge or overlapping the count/TO GO text.
+/// without growing the badge or overlapping the text.
 class _DayBadge extends StatelessWidget {
   final int daysUntil;
   final bool ongoing;
@@ -251,19 +252,21 @@ class _DayBadge extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-            child: Column(
-              children: [
-                Text('$daysUntil', style: AppText.display(19)),
-                Text(
-                  'TO GO',
-                  style: AppText.label(
-                    8,
-                    color: AppColors.textMuted,
-                    tracking: 1.5,
+            child: ongoing
+                ? Text('IN PROGRESS', style: AppText.label(10, tracking: 1.1))
+                : Column(
+                    children: [
+                      Text('$daysUntil', style: AppText.display(19)),
+                      Text(
+                        'TO GO',
+                        style: AppText.label(
+                          8,
+                          color: AppColors.textMuted,
+                          tracking: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
           if (ongoing) const Positioned(left: 3, top: 3, child: _PulsingDot()),
         ],
