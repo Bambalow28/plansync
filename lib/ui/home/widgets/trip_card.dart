@@ -10,14 +10,16 @@ import 'trip_stamp.dart';
 /// network and a key, the trip's gradient cover otherwise.
 ///
 /// Reading order top to bottom: where it is, what it's called, when it runs,
-/// and — when a budget is set — how the money is going. The day count sits
-/// top-right, opposite the place.
+/// and — when a budget is set — how the money is going. A countdown badge
+/// sits top-right, opposite the place — days until the trip starts, for
+/// active/upcoming trips only.
 ///
 /// The whole card is the tap target for both active and past trips. An earlier
 /// version put a small "View trip" button on past cards and made their body
 /// inert; a full-bleed photo already reads as one object, so a competing
 /// button inside it just shrank the target and split the affordance in two.
-/// Past trips are instead marked by a desaturated photo and a DONE stamp.
+/// Past trips are instead marked by a desaturated photo and a small DONE
+/// stamp in the badge's corner.
 class TripCard extends StatelessWidget {
   final Trip trip;
   final VoidCallback onTap;
@@ -65,28 +67,28 @@ class TripCard extends StatelessWidget {
               dimmed: dimmed,
               child: Padding(
                 padding: const EdgeInsets.all(18),
-                child: Stack(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: _PlaceLine(trip: trip)),
-                            const SizedBox(width: 12),
-                            _DayBadge(count: trip.dayCount, ongoing: ongoing),
-                          ],
-                        ),
-                        const Spacer(),
-                        if (trip.budget > 0) ...[
-                          _BudgetProgress(trip: trip),
-                          const SizedBox(height: 10),
-                        ],
-                        _Footer(trip: trip),
+                        Expanded(child: _PlaceLine(trip: trip)),
+                        const SizedBox(width: 12),
+                        dimmed
+                            ? DoneStamp(trip: trip, diameter: 46)
+                            : _DayBadge(
+                                daysUntil: trip.daysUntilStart,
+                                ongoing: ongoing,
+                              ),
                       ],
                     ),
-                    if (dimmed) Positioned.fill(child: DoneStamp(trip: trip)),
+                    const Spacer(),
+                    if (trip.budget > 0) ...[
+                      _BudgetProgress(trip: trip),
+                      const SizedBox(height: 10),
+                    ],
+                    _Footer(trip: trip),
                   ],
                 ),
               ),
@@ -224,17 +226,17 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// Day count, with the live dot pinned inside its top-left corner while the
-/// trip is actually running.
+/// Days until the trip starts, with the live dot pinned inside its top-left
+/// corner while the trip is actually running.
 ///
 /// The badge's own padding (11 horizontal, 7 vertical) is moved onto the text
 /// itself rather than the container, so that padding becomes genuinely empty
 /// space in the Stack's top-left corner — real room for the dot to sit in
-/// without growing the badge or overlapping the count/DAYS text.
+/// without growing the badge or overlapping the count/TO GO text.
 class _DayBadge extends StatelessWidget {
-  final int count;
+  final int daysUntil;
   final bool ongoing;
-  const _DayBadge({required this.count, required this.ongoing});
+  const _DayBadge({required this.daysUntil, required this.ongoing});
 
   @override
   Widget build(BuildContext context) {
@@ -251,9 +253,9 @@ class _DayBadge extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
             child: Column(
               children: [
-                Text('$count', style: AppText.display(19)),
+                Text('$daysUntil', style: AppText.display(19)),
                 Text(
-                  'DAYS',
+                  'TO GO',
                   style: AppText.label(
                     8,
                     color: AppColors.textMuted,

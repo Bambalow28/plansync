@@ -68,6 +68,16 @@ class Trip {
     return end.isBefore(DateTime(today.year, today.month, today.day));
   }
 
+  /// Days remaining before the trip starts — 0 once it's begun. Feeds the
+  /// home card's countdown badge.
+  int get daysUntilStart {
+    final today = DateTime.now();
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final diff = start.difference(todayOnly).inDays;
+    return diff < 0 ? 0 : diff;
+  }
+
   double get spent =>
       items.fold(0.0, (sum, i) => sum + i.cost) + expenses.fold(0.0, (sum, e) => sum + e.amount);
   double get remaining => budget - spent;

@@ -4,57 +4,62 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../../models/trip.dart';
 import '../../../theme/app_theme.dart';
 
-/// A passport-style ink stamp across a finished trip's card: a worn double
-/// ring, hand-set arc type along the rim, and a postmark date/star/rule at
-/// center. Same technique as travelsync's stamp collection
+// Muted, desaturated tones so the ink reads as faded/aged rather than
+// fresh — and so it's never mistaken for the app's own teal accent or
+// warning red. Deterministic per seed so the same stamp always gets the
+// same ink.
+const _inkPalette = [
+  Color(0xFF9C5A4A), // faded brick red
+  Color(0xFF5B7A8C), // washed-out slate blue
+  Color(0xFF6E825A), // muted sage green
+  Color(0xFF7C6A8C), // dusty mauve
+  Color(0xFF9C8256), // aged amber/ochre
+  Color(0xFF5A8484), // weathered teal
+];
+
+/// A passport-style ink stamp: a worn double ring, hand-set arc type along
+/// the top and bottom rim, and a centered postmark line with a star and a
+/// thin rule. Same technique as travelsync's stamp collection
 /// (`StampPainter`/`_drawArcText`/`_drawWornRing`/`_drawStar` in
-/// travelsync/lib/UI/profile/profile_screen.dart), ported here for a single
-/// mark on one card instead of a whole scattered collection.
-class DoneStamp extends StatelessWidget {
-  final Trip trip;
-  const DoneStamp({super.key, required this.trip});
+/// travelsync/lib/UI/profile/profile_screen.dart). [DoneStamp] wraps this
+/// for a finished trip's card; the postcard itinerary view uses it directly
+/// for each day's date stamp.
+class PostmarkStamp extends StatelessWidget {
+  final String topText;
+  final String bottomText;
+  final String centerText;
+  final int seed;
+  final double diameter;
 
-  // Muted, desaturated tones so the ink reads as faded/aged rather than
-  // fresh — and so it's never mistaken for the app's own teal accent or
-  // warning red. Same palette as travelsync, picked deterministically per
-  // trip so the same card always gets the same ink.
-  static const _inkPalette = [
-    Color(0xFF9C5A4A), // faded brick red
-    Color(0xFF5B7A8C), // washed-out slate blue
-    Color(0xFF6E825A), // muted sage green
-    Color(0xFF7C6A8C), // dusty mauve
-    Color(0xFF9C8256), // aged amber/ochre
-    Color(0xFF5A8484), // weathered teal
-  ];
-
-  static const double _diameter = 100;
+  const PostmarkStamp({
+    super.key,
+    required this.topText,
+    required this.bottomText,
+    required this.centerText,
+    required this.seed,
+    this.diameter = 100,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final seed = trip.id.hashCode;
     final ink = _inkPalette[seed.abs() % _inkPalette.length];
     // Never dead level — stamped by hand, not printed. Seeded so a card's
     // tilt stays put across rebuilds.
     final tiltRand = math.Random(seed ^ 0x5DEECE66D);
     final tilt = (tiltRand.nextDouble() - 0.5) * 16 * (math.pi / 180);
-    final country = (trip.destination?.country.trim().isNotEmpty ?? false)
-        ? trip.destination!.country.toUpperCase()
-        : 'PLANSYNC';
-    final date = DateFormat('MMM yyyy').format(trip.endDate).toUpperCase();
 
-    return Center(
-      child: Transform.rotate(
-        angle: tilt,
-        child: SizedBox(
-          width: _diameter,
-          height: _diameter,
-          child: CustomPaint(
-            painter: _StampPainter(
-              country: country,
-              date: date,
-              seed: seed,
-              ink: ink,
-            ),
+    return Transform.rotate(
+      angle: tilt,
+      child: SizedBox(
+        width: diameter,
+        height: diameter,
+        child: CustomPaint(
+          painter: _StampPainter(
+            topText: topText,
+            bottomText: bottomText,
+            centerText: centerText,
+            seed: seed,
+            ink: ink,
           ),
         ),
       ),
@@ -62,15 +67,40 @@ class DoneStamp extends StatelessWidget {
   }
 }
 
+/// The "DONE" mark on a finished trip's card, dated by the trip's end date.
+class DoneStamp extends StatelessWidget {
+  final Trip trip;
+  final double diameter;
+  const DoneStamp({super.key, required this.trip, this.diameter = 100});
+
+  @override
+  Widget build(BuildContext context) {
+    final seed = trip.id.hashCode;
+    final country = (trip.destination?.country.trim().isNotEmpty ?? false)
+        ? trip.destination!.country.toUpperCase()
+        : 'PLANSYNC';
+    final date = DateFormat('MMM yyyy').format(trip.endDate).toUpperCase();
+    return PostmarkStamp(
+      topText: 'DONE',
+      bottomText: country,
+      centerText: date,
+      seed: seed,
+      diameter: diameter,
+    );
+  }
+}
+
 class _StampPainter extends CustomPainter {
-  final String country;
-  final String date;
+  final String topText;
+  final String bottomText;
+  final String centerText;
   final int seed;
   final Color ink;
 
   _StampPainter({
-    required this.country,
-    required this.date,
+    required this.topText,
+    required this.bottomText,
+    required this.centerText,
     required this.seed,
     required this.ink,
   });
@@ -88,7 +118,7 @@ class _StampPainter extends CustomPainter {
 
     _drawArcText(
       canvas,
-      'DONE',
+      topText,
       center,
       radius: radius - 6,
       baseAngle: -math.pi / 2,
@@ -96,22 +126,21 @@ class _StampPainter extends CustomPainter {
     );
     _drawArcText(
       canvas,
-      country,
+      bottomText,
       center,
       radius: radius - 6,
       baseAngle: math.pi / 2,
       clockwise: false,
     );
 
-    // End date, centered, with a star and a thin rule under it like a
-    // postmark date line.
-    final dateStyle = AppText.label(
+    // Centered postmark line, with a star and a thin rule under it.
+    final centerStyle = AppText.label(
       radius * 0.19,
       color: ink.withValues(alpha: 0.9),
       tracking: 0.3,
     ).copyWith(fontWeight: FontWeight.bold);
     final tp = TextPainter(
-      text: TextSpan(text: date, style: dateStyle),
+      text: TextSpan(text: centerText, style: centerStyle),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
     )..layout(maxWidth: radius * 1.6);
@@ -232,7 +261,8 @@ class _StampPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StampPainter oldDelegate) =>
-      oldDelegate.country != country ||
-      oldDelegate.date != date ||
+      oldDelegate.topText != topText ||
+      oldDelegate.bottomText != bottomText ||
+      oldDelegate.centerText != centerText ||
       oldDelegate.ink != ink;
 }

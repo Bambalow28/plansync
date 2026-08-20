@@ -12,6 +12,7 @@ import '../advisor/advisor_dashboard_screen.dart';
 import '../advisor/apply_screen.dart';
 import '../auth/sign_in_screen.dart';
 import '../shared/create_choice_sheet.dart';
+import '../shared/entrance_fade.dart';
 import '../shared/place_search_field.dart';
 import '../trip/trip_detail_screen.dart';
 import '../trip/trip_review_screen.dart';
@@ -164,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       sliver: SliverList.separated(
                         itemCount: active.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 16),
-                        itemBuilder: (context, i) => _EntranceFade(
+                        itemBuilder: (context, i) => EntranceFade(
                           index: i,
                           child: _dismissibleCard(context, active[i]),
                         ),
@@ -186,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       sliver: SliverList.separated(
                         itemCount: past.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 16),
-                        itemBuilder: (context, i) => _EntranceFade(
+                        itemBuilder: (context, i) => EntranceFade(
                           index: active.length + i,
                           child: _dismissibleCard(context, past[i], dimmed: true),
                         ),
@@ -456,28 +457,6 @@ class _DestinationSearchBarState extends State<_DestinationSearchBar> {
 
 /// One-shot fade-and-rise for a list item, staggered by [index] so the trips
 /// arrive in sequence rather than all at once.
-class _EntranceFade extends StatelessWidget {
-  final int index;
-  final Widget child;
-  const _EntranceFade({required this.index, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      // Later cards start later, but the stagger stops growing after a handful
-      // so a long list doesn't leave the last card waiting seconds to appear.
-      duration: Duration(milliseconds: 380 + 70 * (index.clamp(0, 5))),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) => Opacity(
-        opacity: t,
-        child: Transform.translate(offset: Offset(0, (1 - t) * 18), child: child),
-      ),
-      child: child,
-    );
-  }
-}
-
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
