@@ -23,7 +23,10 @@ class UnsplashService {
   // test`, which just makes every surface keep its gradient.
   static const String _apiKey = String.fromEnvironment('UNSPLASH_API_KEY');
   static const String _host = 'api.unsplash.com';
-  static const String _prefsKey = 'unsplash_urls_v1';
+  // Bumped when the requested photo size changes — v1 cached "small" (400px,
+  // blurry on 3x screens) urls; v2 forces every city to re-resolve at
+  // "regular" (1080px) instead of quietly keeping the old blurry ones.
+  static const String _prefsKey = 'unsplash_urls_v2';
 
   bool get isConfigured => _apiKey.isNotEmpty;
 
