@@ -218,16 +218,9 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// Days until the trip starts, with the live dot pinned inside its top-left
-/// corner while the trip is actually running — swapped for an "IN PROGRESS"
-/// label once it is, since a countdown to a trip already underway reads as 0.
-///
-/// The badge's own padding (11 horizontal, 7 vertical) is moved onto the text
-/// itself rather than the container, so that padding becomes genuinely empty
-/// space in the Stack's top-left corner — real room for the dot to sit in
-/// without growing the badge. The "IN PROGRESS" text gets extra left padding
-/// on top of that, since the dot sits closer to the text's left edge than the
-/// countdown number does.
+/// Days until the trip starts — swapped for an "IN PROGRESS" label with a
+/// live dot while the trip is actually running, since a countdown to a trip
+/// already underway reads as 0.
 class _DayBadge extends StatelessWidget {
   final int daysUntil;
   final bool ongoing;
@@ -241,29 +234,33 @@ class _DayBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(ongoing ? 16 : 11, 7, 11, 7),
-            child: ongoing
-                ? Text('IN PROGRESS', style: AppText.label(10, tracking: 1.1))
-                : Column(
-                    children: [
-                      Text('$daysUntil', style: AppText.display(19)),
-                      Text(
-                        'TO GO',
-                        style: AppText.label(
-                          8,
-                          color: AppColors.textMuted,
-                          tracking: 1.5,
-                        ),
-                      ),
-                    ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        child: ongoing
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _PulsingDot(),
+                  const SizedBox(width: 6),
+                  Text(
+                    'IN PROGRESS',
+                    style: AppText.label(10, color: Colors.white, tracking: 1.1),
                   ),
-          ),
-          if (ongoing) const Positioned(left: 3, top: 8, child: _PulsingDot()),
-        ],
+                ],
+              )
+            : Column(
+                children: [
+                  Text('$daysUntil', style: AppText.display(19)),
+                  Text(
+                    'TO GO',
+                    style: AppText.label(
+                      8,
+                      color: AppColors.textMuted,
+                      tracking: 1.5,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
