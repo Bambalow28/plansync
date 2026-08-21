@@ -62,7 +62,6 @@ class TripTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = tripCovers[trip.cover]!;
     final topInset = MediaQuery.of(context).padding.top;
     // Same backdrop as the trip's own card in the list, so opening it feels
     // like a continuation rather than a plain new page.
@@ -73,7 +72,7 @@ class TripTopBar extends StatelessWidget {
             query: trip.hasDestination
                 ? '${trip.destination!.city} ${trip.destination!.country} travel'
                 : '',
-            gradient: colors,
+            gradient: AppColors.tripPhotoFallback,
             dimmed: trip.isPast,
             child: const SizedBox.shrink(),
           ),

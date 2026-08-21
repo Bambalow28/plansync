@@ -55,7 +55,6 @@ void main() {
       endDate: d.add(const Duration(days: 3)),
       budget: 2000,
       currency: 'JPY',
-      cover: TripCover.sunset,
       items: [
         ItineraryItem(
           id: 'i1',
@@ -75,7 +74,6 @@ void main() {
     expect(decoded, isNotNull);
     expect(decoded!.name, 'Japan 2026');
     expect(decoded.currency, 'JPY');
-    expect(decoded.cover, TripCover.sunset);
     expect(decoded.items.single.flightCode, 'DL299');
   });
 

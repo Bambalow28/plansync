@@ -62,11 +62,10 @@ class _StampPainter extends CustomPainter {
     // rather than machine-perfect.
     _drawWornRing(canvas, center, radius, rand);
 
-    final style = AppText.label(
-      radius * 0.34,
-      color: ink.withValues(alpha: 0.9),
-      tracking: 0.8,
-    ).copyWith(fontWeight: FontWeight.bold);
+    // The serif display face reads like hand-set stamp type — the mono
+    // label face used elsewhere in the app felt too clean/mechanical here.
+    final style = AppText.display(radius * 0.44, color: ink.withValues(alpha: 0.9))
+        .copyWith(letterSpacing: 1.4);
     final tp = TextPainter(
       text: TextSpan(text: 'DONE', style: style),
       textDirection: TextDirection.ltr,

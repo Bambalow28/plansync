@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plansync/controllers/trip_controller.dart';
 import 'package:plansync/models/category.dart';
 import 'package:plansync/models/itinerary_item.dart';
-import 'package:plansync/models/trip.dart';
 import 'package:plansync/ui/trip/trip_detail_screen.dart';
 import 'package:plansync/ui/trip/widgets/budget_summary.dart';
 
@@ -26,7 +25,6 @@ void main() {
       endDate: d.add(const Duration(days: 2)),
       budget: 1000,
       currency: 'USD',
-      cover: TripCover.teal,
     );
     for (var i = 0; i < 6; i++) {
       await c.addItem(

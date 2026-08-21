@@ -67,7 +67,7 @@ class ItineraryPdf {
   }
 
   static pw.Widget _header(Trip trip, _Fonts f) {
-    final coverColors = tripCovers[trip.cover]!;
+    final coverColors = AppColors.tripPhotoFallback;
     // Text/tints in the header sit on the cover gradient, not a flat surface —
     // blend against its midpoint as a reasonable stand-in for "the gradient".
     final headerBg = Color.lerp(coverColors[0], coverColors[1], 0.5)!;

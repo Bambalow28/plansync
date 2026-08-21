@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:plansync/controllers/trip_controller.dart';
 import 'package:plansync/models/category.dart';
 import 'package:plansync/models/itinerary_item.dart';
-import 'package:plansync/models/trip.dart';
 import 'package:plansync/ui/shared/add_item_sheet.dart';
 
 void main() {
@@ -26,7 +25,6 @@ void main() {
       endDate: d.add(const Duration(days: 1)),
       budget: 0,
       currency: 'USD',
-      cover: TripCover.teal,
     );
     final item = ItineraryItem(id: 'x', title: 'Museum', category: PlanCategory.activity, day: d, cost: 10);
     trip.items.add(item);

@@ -127,9 +127,10 @@ class UnsplashService {
         return null;
       }
       final urls = (results.first as Map<String, dynamic>)['urls'] as Map<String, dynamic>?;
-      // "small" is ~400px wide — ample for a card that is at most 400pt across,
-      // and a fraction of "regular" (1080px) to pull down.
-      final url = (urls?['small'] ?? urls?['regular']) as String?;
+      // "regular" is 1080px wide — a card is at most 400pt across, but on a
+      // 3x device that's ~1200 real pixels; "small" (400px) was stretched
+      // ~3x and read as blurry.
+      final url = (urls?['regular'] ?? urls?['small']) as String?;
       if (url == null) {
         _misses.add(query);
         return null;

@@ -38,14 +38,6 @@ class TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColors = tripCovers[trip.cover]!;
-    final colors = dimmed
-        ? [
-            for (final c in baseColors)
-              Color.lerp(c, AppColors.surfaceLow, 0.78)!,
-          ]
-        : baseColors;
-
     final ongoing = !dimmed && tripIsOngoing(trip.startDate, trip.endDate);
 
     return GestureDetector(
@@ -63,7 +55,7 @@ class TripCard extends StatelessWidget {
               query: trip.hasDestination
                   ? '${trip.destination!.city} ${trip.destination!.country} travel'
                   : '',
-              gradient: colors,
+              gradient: AppColors.tripPhotoFallback,
               dimmed: dimmed,
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -226,70 +218,42 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// Days until the trip starts, with the live dot pinned inside its top-left
-/// corner while the trip is actually running — swapped for an "IN PROGRESS"
-/// label once it is, since a countdown to a trip already underway reads as 0.
-///
-/// The badge's own padding (11 horizontal, 7 vertical) is moved onto the text
-/// itself rather than the container, so that padding becomes genuinely empty
-/// space in the Stack's top-left corner — real room for the dot to sit in
-/// without growing the badge or overlapping the text.
-class _DayBadge extends StatelessWidget {
+/// Days until the trip starts — swapped for an "IN PROGRESS" label, the whole
+/// badge breathing between its resting look and the app's accent color, once
+/// the trip is actually running (a countdown to a trip already underway
+/// would otherwise just read as 0).
+class _DayBadge extends StatefulWidget {
   final int daysUntil;
   final bool ongoing;
   const _DayBadge({required this.daysUntil, required this.ongoing});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.32),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-            child: ongoing
-                ? Text('IN PROGRESS', style: AppText.label(10, tracking: 1.1))
-                : Column(
-                    children: [
-                      Text('$daysUntil', style: AppText.display(19)),
-                      Text(
-                        'TO GO',
-                        style: AppText.label(
-                          8,
-                          color: AppColors.textMuted,
-                          tracking: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          if (ongoing) const Positioned(left: 3, top: 3, child: _PulsingDot()),
-        ],
-      ),
-    );
-  }
+  State<_DayBadge> createState() => _DayBadgeState();
 }
 
-/// A small "live" indicator for a trip in progress — a dot with an expanding,
-/// fading halo, looping.
-class _PulsingDot extends StatefulWidget {
-  const _PulsingDot();
-
-  @override
-  State<_PulsingDot> createState() => _PulsingDotState();
-}
-
-class _PulsingDotState extends State<_PulsingDot>
-    with SingleTickerProviderStateMixin {
+class _DayBadgeState extends State<_DayBadge> with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1600),
-  )..repeat();
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.ongoing) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DayBadge old) {
+    super.didUpdateWidget(old);
+    if (widget.ongoing == old.ongoing) return;
+    if (widget.ongoing) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.value = 0;
+    }
+  }
 
   @override
   void dispose() {
@@ -297,40 +261,42 @@ class _PulsingDotState extends State<_PulsingDot>
     super.dispose();
   }
 
+  static const _restBackground = Color(0x52000000); // Colors.black @ 0.32
+  static const _restBorder = Color(0x1AFFFFFF); // Colors.white @ 0.1
+
   @override
   Widget build(BuildContext context) {
+    if (!widget.ongoing) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: _restBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _restBorder),
+        ),
+        child: Column(
+          children: [
+            Text('${widget.daysUntil}', style: AppText.display(19)),
+            Text(
+              'TO GO',
+              style: AppText.label(8, color: AppColors.textMuted, tracking: 1.5),
+            ),
+          ],
+        ),
+      );
+    }
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
-        return SizedBox(
-          width: 12,
-          height: 12,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Opacity(
-                opacity: (1 - t).clamp(0.0, 1.0),
-                child: Transform.scale(
-                  scale: 0.5 + t * 1.5,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.accent.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.accent,
-                ),
-              ),
-            ],
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          decoration: BoxDecoration(
+            color: Color.lerp(_restBackground, AppColors.accent.withValues(alpha: 0.35), t),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Color.lerp(_restBorder, AppColors.accent, t)!),
           ),
+          child: Text('IN PROGRESS', style: AppText.label(10, tracking: 1.1)),
         );
       },
     );

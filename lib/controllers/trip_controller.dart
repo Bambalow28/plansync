@@ -64,7 +64,6 @@ class TripController extends ChangeNotifier {
     required DateTime endDate,
     required double budget,
     required String currency,
-    required TripCover cover,
   }) async {
     final trip = Trip(
       id: _newId(),
@@ -74,7 +73,6 @@ class TripController extends ChangeNotifier {
       endDate: endDate,
       budget: budget,
       currency: currency,
-      cover: cover,
     );
     _trips.add(trip);
     await _persist();
@@ -94,7 +92,6 @@ class TripController extends ChangeNotifier {
       endDate: decoded.endDate,
       budget: decoded.budget,
       currency: decoded.currency,
-      cover: decoded.cover,
       items: decoded.items,
       expenses: decoded.expenses,
     );

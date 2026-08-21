@@ -31,6 +31,10 @@ class AppColors {
     colors: [surfaceHigh, surfaceLow],
   );
 
+  /// A trip's backdrop before its destination photo (or a network) is
+  /// available — no per-trip color choice, just the app's own surface tone.
+  static const List<Color> tripPhotoFallback = [surfaceHigh, surfaceLow];
+
   // Text.
   static const Color textPrimary = Colors.white;
   static Color textSecondary = Colors.white.withValues(alpha: 0.55);

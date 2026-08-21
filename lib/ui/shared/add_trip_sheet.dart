@@ -58,7 +58,6 @@ class _AddTripSheetState extends State<AddTripSheet> {
   DateTime? _start;
   DateTime? _end;
   late String _currency;
-  late TripCover _cover;
 
   static const _currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'MXN'];
 
@@ -81,7 +80,6 @@ class _AddTripSheetState extends State<AddTripSheet> {
     _start = e?.startDate;
     _end = e?.endDate;
     _currency = e?.currency ?? 'USD';
-    _cover = e?.cover ?? TripCover.teal;
     // Re-evaluate the Save button as the text fields change.
     _name.addListener(_changed);
     _budget.addListener(_changed);
@@ -99,8 +97,7 @@ class _AddTripSheetState extends State<AddTripSheet> {
         _start != e.startDate ||
         _end != e.endDate ||
         parseMoney(_budget.text) != e.budget ||
-        _currency != e.currency ||
-        _cover != e.cover;
+        _currency != e.currency;
   }
 
   @override
@@ -165,7 +162,6 @@ class _AddTripSheetState extends State<AddTripSheet> {
         endDate: _end!,
         budget: budget,
         currency: _currency,
-        cover: _cover,
       );
       final plan = widget.planSource;
       if (plan != null) {
@@ -181,7 +177,6 @@ class _AddTripSheetState extends State<AddTripSheet> {
       e.endDate = _end!;
       e.budget = budget;
       e.currency = _currency;
-      e.cover = _cover;
       await TripController.instance.updateTrip(e);
     }
     if (mounted) Navigator.pop(context);
@@ -246,37 +241,6 @@ class _AddTripSheetState extends State<AddTripSheet> {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 20),
-        Text('COVER', style: AppText.label(10)),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: TripCover.values.map((c) {
-            final selected = c == _cover;
-            return GestureDetector(
-              onTap: () => setState(() => _cover = c),
-              child: Container(
-                width: 52,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: tripCovers[c]!,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: selected
-                        ? AppColors.accent
-                        : Colors.white.withValues(alpha: 0.08),
-                    width: selected ? 2 : 1,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
         ),
                   ],
                 ),

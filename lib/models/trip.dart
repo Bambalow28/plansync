@@ -3,7 +3,8 @@ import 'expense.dart';
 import 'itinerary_item.dart';
 import 'place.dart';
 
-/// A cover gradient option for a trip card — the visual identity of the trip.
+/// A gradient palette shared by the advisor screens and the suggested-places
+/// carousel for their own card backdrops — no longer a per-trip choice.
 enum TripCover { teal, sunset, violet, ocean, forest, slate }
 
 const Map<TripCover, List<Color>> tripCovers = {
@@ -23,7 +24,6 @@ class Trip {
   DateTime endDate;
   double budget;
   String currency;
-  TripCover cover;
   List<ItineraryItem> items;
 
   /// Trip-level costs booked ahead (hotels, flights, etc.).
@@ -40,7 +40,6 @@ class Trip {
     required this.endDate,
     this.budget = 0,
     this.currency = 'USD',
-    this.cover = TripCover.teal,
     List<ItineraryItem>? items,
     List<Expense>? expenses,
   })  : items = items ?? [],
@@ -96,7 +95,6 @@ class Trip {
     'endDate': endDate.toIso8601String(),
     'budget': budget,
     'currency': currency,
-    'cover': cover.name,
     'items': items.map((i) => i.toJson()).toList(),
     'expenses': expenses.map((e) => e.toJson()).toList(),
   };
@@ -113,10 +111,6 @@ class Trip {
     endDate: DateTime.parse(j['endDate'] as String),
     budget: (j['budget'] as num?)?.toDouble() ?? 0,
     currency: (j['currency'] ?? 'USD') as String,
-    cover: TripCover.values.firstWhere(
-      (c) => c.name == (j['cover'] ?? 'teal'),
-      orElse: () => TripCover.teal,
-    ),
     items: ((j['items'] ?? []) as List)
         .map((e) => ItineraryItem.fromJson(e as Map<String, dynamic>))
         .toList(),

@@ -166,7 +166,6 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
       endDate: _end!,
       budget: 0,
       currency: 'USD',
-      cover: TripCover.teal,
     );
     final items = [
       if (hotel.isNotEmpty)

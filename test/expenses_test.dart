@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:plansync/controllers/trip_controller.dart';
-import 'package:plansync/models/trip.dart';
 import 'package:plansync/ui/trip/widgets/budget_summary.dart';
 
 void main() {
@@ -22,7 +21,6 @@ void main() {
       endDate: d.add(const Duration(days: 2)),
       budget: 1000,
       currency: 'USD',
-      cover: TripCover.teal,
     );
 
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: BudgetBar(trip: trip)))));
