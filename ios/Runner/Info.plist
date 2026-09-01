@@ -10,6 +10,8 @@
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PlanSync uses your location to suggest trending destinations near you. You can decline and still browse every suggestion.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PlanSync uses your location to suggest trending destinations near you. You can decline and still browse every suggestion.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
