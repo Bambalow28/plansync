@@ -130,8 +130,10 @@ class MyPlace {
 /// [requests]. All three are live snapshots — an edit elsewhere (or by the
 /// owner, for [status]) shows up here without a reload.
 ///
-/// ponytail: no owner-review pipeline yet — applications are approved by hand
-/// in the Firebase console, not through the app.
+/// ponytail: no owner-review pipeline in the app — applications are approved
+/// by hand in the Firebase console. The review queue itself now lives on the
+/// web at supremolabs.com/plansync/desk; it goes live once PlanSync has a web
+/// Firebase app to sign into.
 class AdvisorWorkspace extends ChangeNotifier {
   AdvisorWorkspace._();
   static final AdvisorWorkspace instance = AdvisorWorkspace._();

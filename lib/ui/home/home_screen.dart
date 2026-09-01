@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final past = [
               for (final t in trips)
                 if (t.isPast) t,
-            ];
+            ]..sort((a, b) => b.endDate.compareTo(a.endDate));
 
             return CustomScrollView(
               slivers: [

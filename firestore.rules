@@ -2,29 +2,57 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Studio staff. One empty doc per admin uid, created by hand in the
+    // Firebase console — nothing in any client can read or write this
+    // collection, only `exists()` below consults it.
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isSelf(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
     // A user's own account record.
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     // An advisor's application/profile. Public read once approved (needed by
-    // the advisor list/profile screens); only the owner can write, and only
-    // the owner can move their own status (owner review happens by hand in
-    // the Firebase console for now, not through the app).
+    // the advisor list/profile screens); an admin reads every one, including
+    // the pending ones the desk queue is built from.
+    //
+    // An advisor owns every field of their own doc EXCEPT `status`: they may
+    // leave it as-is (an ordinary profile save) or move it back to `pending`
+    // to re-apply after a decline. Only an admin approves.
     match /advisors/{uid} {
-      allow read: if resource.data.status == 'approved' ||
-        (request.auth != null && request.auth.uid == uid);
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read: if resource.data.status == 'approved' || isSelf(uid) || isAdmin();
+
+      allow create: if isSelf(uid) && request.resource.data.status == 'pending';
+      allow update: if isAdmin() ||
+        (isSelf(uid) && (
+          request.resource.data.status == resource.data.status ||
+          (request.resource.data.status == 'pending' &&
+           resource.data.status != 'approved')
+        ));
+      allow delete: if isAdmin();
 
       match /places/{placeId} {
         allow read: if get(/databases/$(database)/documents/advisors/$(uid)).data.status == 'approved' ||
-          (request.auth != null && request.auth.uid == uid);
-        allow write: if request.auth != null && request.auth.uid == uid;
+          isSelf(uid) || isAdmin();
+        allow write: if isSelf(uid);
       }
     }
 
+    // Admin reads the whole pipeline but never answers for an advisor —
+    // updates stay with the two people the request is between.
     match /requests/{requestId} {
-      allow read, update: if request.auth != null &&
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.travellerId ||
+         request.auth.uid == resource.data.advisorId ||
+         isAdmin());
+      allow update: if request.auth != null &&
         (request.auth.uid == resource.data.travellerId || request.auth.uid == resource.data.advisorId);
       allow create: if request.auth != null && request.auth.uid == request.resource.data.travellerId;
     }

@@ -224,7 +224,7 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
     final buttonEnabled = !_generating && (_done || _canGenerate);
     return PopScope(
       canPop: !_generating,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) _showBlockedBackDialog();
       },
       child: Scaffold(
