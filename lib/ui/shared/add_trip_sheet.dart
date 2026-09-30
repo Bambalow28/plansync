@@ -3,6 +3,7 @@ import '../../controllers/trip_controller.dart';
 import '../../data/suggested_places.dart';
 import '../../models/place.dart';
 import '../../models/trip.dart';
+import '../../services/settings_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 import 'date_range_dialog.dart';
@@ -79,7 +80,7 @@ class _AddTripSheetState extends State<AddTripSheet> {
     );
     _start = e?.startDate;
     _end = e?.endDate;
-    _currency = e?.currency ?? 'USD';
+    _currency = e?.currency ?? SettingsService.instance.defaultCurrency;
     // Re-evaluate the Save button as the text fields change.
     _name.addListener(_changed);
     _budget.addListener(_changed);

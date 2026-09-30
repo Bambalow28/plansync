@@ -7,9 +7,11 @@ import 'controllers/trip_controller.dart';
 import 'firebase_options.dart';
 import 'models/trip.dart';
 import 'services/advisor_workspace.dart';
+import 'services/icloud_backup_service.dart';
 import 'services/live_activity_service.dart';
 import 'services/notification_service.dart';
 import 'services/onboarding_service.dart';
+import 'services/settings_service.dart';
 import 'services/trip_link.dart';
 import 'services/unsplash_service.dart';
 import 'theme/app_theme.dart';
@@ -32,6 +34,7 @@ void main() async {
     ),
   );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await SettingsService.instance.load();
   await TripController.instance.load();
   // Load the saved destination-photo urls before the first frame so cards that
   // already have one paint it immediately instead of resolving it again.
@@ -72,6 +75,7 @@ class _PlanSyncAppState extends State<PlanSyncApp> {
           MaterialPageRoute(builder: (_) => const OnboardingScreen()),
         );
       }
+      _offerRestore();
     });
   }
 
@@ -79,6 +83,43 @@ class _PlanSyncAppState extends State<PlanSyncApp> {
   void dispose() {
     _linkSub?.cancel();
     super.dispose();
+  }
+
+  /// A reinstall (or new phone) opens empty while an iCloud backup exists:
+  /// offer to bring the trips back, once. Settings keeps a manual restore.
+  Future<void> _offerRestore() async {
+    final settings = SettingsService.instance;
+    if (settings.restorePrompted || TripController.instance.trips.isNotEmpty) return;
+    final info = await ICloudBackupService.instance.latest();
+    if (info == null || info.tripCount == 0) return;
+    await settings.setRestorePrompted();
+    final ctx = _navKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    final ok = await showDialog<bool>(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceHigh,
+        title: Text('Restore your trips?', style: AppText.display(20)),
+        content: Text(
+          'Found an iCloud backup with ${info.tripCount} '
+          'trip${info.tripCount == 1 ? '' : 's'}.',
+          style: AppText.body(14, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Not now', style: AppText.body(14, color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Restore', style: AppText.body(14, color: AppColors.accent)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final trips = await ICloudBackupService.instance.readTrips();
+    if (trips != null) await TripController.instance.mergeTrips(trips);
   }
 
   void _onUri(Uri uri) {

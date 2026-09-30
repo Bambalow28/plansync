@@ -8,6 +8,8 @@ class EntranceFade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Reduce Motion: show the item in place, no rise or fade.
+    if (MediaQuery.disableAnimationsOf(context)) return child;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       // Later items start later, but the stagger stops growing after a

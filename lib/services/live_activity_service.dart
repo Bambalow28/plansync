@@ -7,6 +7,7 @@ import '../models/category.dart';
 import '../models/itinerary_item.dart';
 import '../models/trip.dart';
 import '../utils/format.dart';
+import 'settings_service.dart';
 
 /// Shows the user's **next plan** as a Lock Screen / Dynamic Island Live
 /// Activity, styled like an in-app plan card. No-op until [init] succeeds and
@@ -92,6 +93,7 @@ class LiveActivityService {
         }
       }
 
+      if (!SettingsService.instance.liveActivityEnabled) next = null;
       if (next == null || owner == null) {
         if (_created) {
           await _plugin.endActivity(_activityId);

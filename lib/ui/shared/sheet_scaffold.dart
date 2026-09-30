@@ -86,6 +86,7 @@ class SheetScaffold extends StatelessWidget {
                   if (onDelete != null)
                     IconButton(
                       onPressed: onDelete,
+                      tooltip: 'Delete',
                       icon: Icon(
                         Icons.delete_outline_rounded,
                         color: AppColors.warning,
@@ -94,6 +95,7 @@ class SheetScaffold extends StatelessWidget {
                   if (onEdit != null)
                     IconButton(
                       onPressed: onEdit,
+                      tooltip: 'Edit',
                       icon: Icon(Icons.edit_outlined, color: AppColors.accent),
                     ),
                   if (onDone != null)
@@ -150,7 +152,13 @@ class _SaveButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: GestureDetector(
       onTap: onTap,
       child: Opacity(
         opacity: enabled ? 1 : 0.4,
@@ -170,6 +178,7 @@ class _SaveButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

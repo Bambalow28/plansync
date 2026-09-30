@@ -3,6 +3,7 @@ import '../models/trip.dart';
 import '../models/itinerary_item.dart';
 import '../models/place.dart';
 import '../services/attachment_service.dart';
+import '../services/icloud_backup_service.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -45,6 +46,7 @@ class TripController extends ChangeNotifier {
     // their services are enabled).
     NotificationService.instance.syncAll(_trips);
     LiveActivityService.instance.syncNext(_trips);
+    ICloudBackupService.instance.scheduleBackup();
     notifyListeners();
   }
 
@@ -98,6 +100,26 @@ class TripController extends ChangeNotifier {
     _trips.add(trip);
     await _persist();
     return trip;
+  }
+
+  /// Adds the trips in [incoming] that aren't on this device yet (by id) and
+  /// keeps everything already here. Returns how many were added.
+  Future<int> mergeTrips(List<Trip> incoming) async {
+    final have = {for (final t in _trips) t.id};
+    final fresh = incoming.where((t) => !have.contains(t.id)).toList();
+    if (fresh.isEmpty) return 0;
+    _trips.addAll(fresh);
+    await _persist();
+    return fresh.length;
+  }
+
+  /// Deletes every trip and its documents from this device.
+  Future<void> deleteAll() async {
+    for (final t in _trips) {
+      await AttachmentService.instance.deleteAll(t.items.expand((i) => i.attachments));
+    }
+    _trips.clear();
+    await _persist();
   }
 
   Future<void> deleteTrip(String id) async {

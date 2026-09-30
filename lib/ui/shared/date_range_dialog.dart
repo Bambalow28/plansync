@@ -107,6 +107,7 @@ class _DateRangeDialogState extends State<_DateRangeDialog> {
               children: [
                 IconButton(
                   onPressed: canGoPrev ? () => _changeMonth(-1) : null,
+                  tooltip: 'Previous month',
                   icon: Icon(
                     Icons.chevron_left_rounded,
                     color: canGoPrev ? AppColors.textPrimary : AppColors.textMuted,
@@ -121,6 +122,7 @@ class _DateRangeDialogState extends State<_DateRangeDialog> {
                 ),
                 IconButton(
                   onPressed: canGoNext ? () => _changeMonth(1) : null,
+                  tooltip: 'Next month',
                   icon: Icon(
                     Icons.chevron_right_rounded,
                     color: canGoNext ? AppColors.textPrimary : AppColors.textMuted,

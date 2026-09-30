@@ -12,6 +12,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 import '../trip/trip_detail_screen.dart';
 import '../trip/trip_review_screen.dart';
+import '../../services/settings_service.dart';
 import 'date_range_dialog.dart';
 import 'hotel_address_field.dart';
 import 'place_search_field.dart';
@@ -165,7 +166,7 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
       startDate: _start!,
       endDate: _end!,
       budget: 0,
-      currency: 'USD',
+      currency: SettingsService.instance.defaultCurrency,
     );
     final items = [
       if (hotel.isNotEmpty)

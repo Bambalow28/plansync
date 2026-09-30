@@ -47,6 +47,11 @@ class AppColors {
 class AppText {
   AppText._();
 
+  /// Smallest type the app sets — the iOS floor for legible text. Anything
+  /// asked for below it (mono captions, badges) is raised to it.
+  static const double minSize = 11;
+  static double _floor(double size) => size < minSize ? minSize : size;
+
   // Font families bundled under assets/fonts (declared in pubspec).
   static const String serif = 'CrimsonText';
   static const String mono = 'AnonymousPro';
@@ -64,7 +69,7 @@ class AppText {
   /// Mono labels — small, uppercase, tracked.
   static TextStyle label(double size, {Color? color, double tracking = 1.2}) => TextStyle(
         fontFamily: mono,
-        fontSize: size,
+        fontSize: _floor(size),
         color: color ?? AppColors.textMuted,
         letterSpacing: tracking,
       );
@@ -72,7 +77,7 @@ class AppText {
   /// Default body.
   static TextStyle body(double size, {Color? color, FontWeight? weight}) => TextStyle(
         fontFamily: sans,
-        fontSize: size,
+        fontSize: _floor(size),
         color: color ?? AppColors.textPrimary,
         fontWeight: weight ?? FontWeight.w500,
       );

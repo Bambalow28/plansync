@@ -105,6 +105,7 @@ class TripTopBar extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
+                    tooltip: 'Back',
                     icon: const Icon(
                       Icons.arrow_back_rounded,
                       color: Colors.white,
@@ -120,6 +121,7 @@ class TripTopBar extends StatelessWidget {
                     ),
                   ),
                   PopupMenuButton<int>(
+                    tooltip: 'Share',
                     icon: Icon(
                       Icons.ios_share_rounded,
                       color: AppColors.textSecondary,
@@ -145,10 +147,12 @@ class TripTopBar extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: onEdit,
+                    tooltip: 'Edit trip',
                     icon: Icon(Icons.edit_outlined, color: AppColors.accent),
                   ),
                   IconButton(
                     onPressed: onDelete,
+                    tooltip: 'Delete trip',
                     icon: Icon(
                       Icons.delete_outline_rounded,
                       color: AppColors.warning,

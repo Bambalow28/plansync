@@ -22,6 +22,10 @@ class StorageService {
     }
   }
 
+  /// The stored JSON exactly as saved — what the iCloud backup copies.
+  Future<String?> readRaw() async =>
+      (await SharedPreferences.getInstance()).getString(_key);
+
   Future<void> saveTrips(List<Trip> trips) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(trips.map((t) => t.toJson()).toList());

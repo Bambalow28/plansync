@@ -211,6 +211,7 @@ class _DayTopBar extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
+            tooltip: 'Back',
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
           Expanded(

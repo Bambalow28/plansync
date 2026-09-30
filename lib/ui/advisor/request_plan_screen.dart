@@ -173,11 +173,13 @@ class _RequestPlanScreenState extends State<RequestPlanScreen> {
                           onPressed: _partySize > 1
                               ? () => setState(() => _partySize--)
                               : null,
+                          tooltip: 'Fewer travellers',
                           icon: Icon(Icons.remove_circle_outline_rounded, color: AppColors.textSecondary),
                         ),
                         Text('$_partySize', style: AppText.body(15, weight: FontWeight.w700)),
                         IconButton(
                           onPressed: () => setState(() => _partySize++),
+                          tooltip: 'More travellers',
                           icon: Icon(Icons.add_circle_outline_rounded, color: AppColors.accent),
                         ),
                       ],

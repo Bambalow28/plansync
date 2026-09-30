@@ -11,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../advisor/advisor_dashboard_screen.dart';
 import '../advisor/apply_screen.dart';
 import '../auth/sign_in_screen.dart';
+import '../settings/settings_screen.dart';
 import '../shared/create_choice_sheet.dart';
 import '../shared/entrance_fade.dart';
 import '../shared/place_search_field.dart';
@@ -275,6 +276,16 @@ class _TopBar extends StatelessWidget {
               ),
               const Spacer(),
               const _AdvisorButton(),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: 'Settings',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                icon: Icon(Icons.settings_outlined, color: AppColors.textSecondary),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 22),
@@ -307,7 +318,11 @@ class _AdvisorButton extends StatelessWidget {
             ? workspace.pendingRequestCount
             : 0;
 
-        return GestureDetector(
+        return Semantics(
+          button: true,
+          label: pending > 0 ? '$label, $pending pending requests' : label,
+          excludeSemantics: true,
+          child: GestureDetector(
           onTap: () async {
             if (AuthService.instance.currentUser == null) {
               final signedIn = await Navigator.push<bool>(
@@ -326,7 +341,13 @@ class _AdvisorButton extends StatelessWidget {
               ),
             );
           },
-          child: Stack(
+          behavior: HitTestBehavior.opaque,
+          // 44pt-tall hit area around the compact pill.
+          child: SizedBox(
+            height: 44,
+            child: Center(
+              widthFactor: 1,
+              child: Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
@@ -383,6 +404,9 @@ class _AdvisorButton extends StatelessWidget {
                   ),
                 ),
             ],
+          ),
+            ),
+          ),
           ),
         );
       },
@@ -503,7 +527,12 @@ class _NewTripButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: 'New Trip',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -533,6 +562,7 @@ class _NewTripButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

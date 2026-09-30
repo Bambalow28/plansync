@@ -6,6 +6,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../models/itinerary_item.dart';
 import '../models/trip.dart';
+import 'settings_service.dart';
 
 /// Schedules "heads up" local notifications a set time before a plan begins.
 /// Until [init] succeeds this is a no-op, so tests and headless runs are safe.
@@ -52,6 +53,7 @@ class NotificationService {
     if (!_enabled) return;
     try {
       await _plugin.cancelAll();
+      if (!SettingsService.instance.remindersEnabled) return;
       final now = DateTime.now();
       for (final trip in trips) {
         for (final item in trip.items) {
