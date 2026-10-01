@@ -20,8 +20,8 @@ import 'money_field.dart';
 import 'place_search_field.dart';
 
 /// Drafts a trip via [AiItineraryService]: destination, dates, budget and
-/// currency in, a day-by-day itinerary out. The step rail plays on a fixed pace
-/// (the API isn't streamed) and holds on its last step until the draft lands.
+/// currency in, a day-by-day itinerary out. The step rail is paced to the
+/// expected wait (the API isn't streamed) and speeds up once the draft lands.
 class AiCreateTripScreen extends StatefulWidget {
   /// Pre-fills the destination when the flow was entered from a place the user
   /// already picked (home search bar, suggested-destination carousel).
@@ -126,9 +126,19 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
       _progress = [_kStartLabel];
     });
 
+    // Pace the steps to the expected wait (~10s + 4s/day, spread over the
+    // steps); once the draft lands, flush whatever is left quickly.
+    var drafted = false;
+    final days = _end!.difference(_start!).inDays + 1;
+    final stepMs = (10000 + 4000 * days) ~/ _kDemoSteps.length;
     final reveal = () async {
       for (final label in _kDemoSteps) {
-        await Future.delayed(const Duration(milliseconds: 900));
+        var waited = 0;
+        int wait() => drafted ? 350 : stepMs;
+        while (waited < wait()) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waited += 100;
+        }
         if (!mounted) return;
         setState(() => _progress = [..._progress, label]);
       }
@@ -146,7 +156,9 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
         currency: _currency,
         hotelAddress: hotel.isEmpty ? null : hotel,
       );
+      drafted = true;
     } on AiItineraryException catch (e) {
+      drafted = true;
       if (!mounted) return;
       setState(() {
         _generating = false;

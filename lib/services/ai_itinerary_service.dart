@@ -50,7 +50,7 @@ class AiItineraryService {
         ..contentType = ContentType.json;
       req.add(utf8.encode(jsonEncode({
         'model': _model,
-        'max_completion_tokens': (800 * days + 1000).clamp(2000, 12000),
+        'max_completion_tokens': (800 * days + 6000).clamp(8000, 32000),
         'messages': [
           {
             'role': 'user',
@@ -67,8 +67,11 @@ class AiItineraryService {
               : 'The AI service returned an error (${res.statusCode}): ${_apiReason(body)}',
         );
       }
-      final text = jsonDecode(body)['choices'][0]['message']['content'] as String;
-      return parseItems(text, start, days);
+      final choice = jsonDecode(body)['choices'][0];
+      if (choice['finish_reason'] == 'length') {
+        throw const AiItineraryException('The itinerary was too long to finish. Try fewer days.');
+      }
+      return parseItems(choice['message']['content'] as String, start, days);
     } on AiItineraryException {
       rethrow;
     } on FormatException {
@@ -98,7 +101,10 @@ class AiItineraryService {
     DateTime start,
     int days,
   ) {
-    final raw = (jsonDecode(_stripFences(text)) as List).cast<Map<String, dynamic>>();
+    var decoded = jsonDecode(_stripFences(text));
+    // Tolerate {"items": [...]} wrappers.
+    if (decoded is Map) decoded = decoded.values.firstWhere((v) => v is List);
+    final raw = (decoded as List).cast<Map<String, dynamic>>();
     return [
       for (final r in raw)
         if (((r['day'] as num?)?.toInt() ?? 0) >= 0 && ((r['day'] as num?)?.toInt() ?? 0) < days)
@@ -114,7 +120,9 @@ class AiItineraryService {
       final end = t.lastIndexOf('```');
       if (end != -1) t = t.substring(0, end);
     }
-    return t.trim();
+    // Drop any chatter around the array.
+    final a = t.indexOf('['), b = t.lastIndexOf(']');
+    return a != -1 && b > a ? t.substring(a, b + 1) : t.trim();
   }
 
   static ItineraryItem _itemFrom(Map<String, dynamic> raw, String id, DateTime start) {
