@@ -23,7 +23,7 @@ class AiItineraryService {
   static final AiItineraryService instance = AiItineraryService._();
 
   static const String _apiKey = String.fromEnvironment('OPENAI_API_KEY');
-  static const String _model = 'gpt-4o';
+  static const String _model = 'gpt-6-luna';
 
   bool get isConfigured => _apiKey.isNotEmpty;
 
@@ -50,7 +50,7 @@ class AiItineraryService {
         ..contentType = ContentType.json;
       req.add(utf8.encode(jsonEncode({
         'model': _model,
-        'max_tokens': (800 * days + 1000).clamp(2000, 12000),
+        'max_completion_tokens': (800 * days + 1000).clamp(2000, 12000),
         'messages': [
           {
             'role': 'user',
@@ -64,7 +64,7 @@ class AiItineraryService {
         throw AiItineraryException(
           res.statusCode == 429 || res.statusCode >= 500
               ? 'The AI is busy right now. Try again in a minute.'
-              : 'The AI service returned an error (${res.statusCode}).',
+              : 'The AI service returned an error (${res.statusCode}): ${_apiReason(body)}',
         );
       }
       final text = jsonDecode(body)['choices'][0]['message']['content'] as String;
@@ -79,6 +79,15 @@ class AiItineraryService {
       throw const AiItineraryException('Couldn\'t reach the AI. Check your connection and try again.');
     } finally {
       client.close();
+    }
+  }
+
+  /// OpenAI's own explanation ("Project X does not have access to model…").
+  static String _apiReason(String body) {
+    try {
+      return jsonDecode(body)['error']['message'] as String;
+    } catch (_) {
+      return 'no details';
     }
   }
 
