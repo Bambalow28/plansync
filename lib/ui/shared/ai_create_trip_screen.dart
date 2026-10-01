@@ -14,21 +14,23 @@ import '../trip/trip_detail_screen.dart';
 import '../trip/trip_review_screen.dart';
 import '../../services/settings_service.dart';
 import 'date_range_dialog.dart';
+import 'add_trip_sheet.dart' show CurrencyDropdown;
 import 'hotel_address_field.dart';
+import 'money_field.dart';
 import 'place_search_field.dart';
 
-/// Drafts a trip via [AiItineraryService]. The step rail is designed to
-/// reflect real progress (each label appearing the moment its category shows
-/// up in the response), but since that service is currently a stub with no
-/// AI provider wired up, [_kDemoSteps] plays the full flow on a fixed pace
-/// instead so the UI can still be seen end to end. The trip itself is always
-/// created — it just gets no itinerary items until a provider is connected.
+/// Drafts a trip via [AiItineraryService]: destination, dates, budget and
+/// currency in, a day-by-day itinerary out. The step rail plays on a fixed pace
+/// (the API isn't streamed) and holds on its last step until the draft lands.
 class AiCreateTripScreen extends StatefulWidget {
   /// Pre-fills the destination when the flow was entered from a place the user
   /// already picked (home search bar, suggested-destination carousel).
   final Place? initialDestination;
 
-  const AiCreateTripScreen({super.key, this.initialDestination});
+  /// Pre-fills the budget field (e.g. a trending plan's suggested total).
+  final double? initialBudget;
+
+  const AiCreateTripScreen({super.key, this.initialDestination, this.initialBudget});
 
   @override
   State<AiCreateTripScreen> createState() => _AiCreateTripScreenState();
@@ -37,11 +39,6 @@ class AiCreateTripScreen extends StatefulWidget {
 const _kStartLabel = 'Creating your itinerary';
 const _kDoneLabel = 'Your itinerary is ready!';
 
-// ponytail: AiItineraryService.generate() is a stub right now (Gemini
-// disconnected, see that file), so it has no real progress to report — this
-// plays the full step flow on a fixed pace instead, purely so the UI can
-// still be seen end to end. Once a real provider is wired up and reporting
-// through onProgress below, this can go back to being driven by that.
 const _kDemoSteps = [
   'Finding things to do',
   'Finding great places to eat',
@@ -50,24 +47,14 @@ const _kDemoSteps = [
   'Adding final touches',
 ];
 
-/// Friendly progress label for the first time each category shows up in the
-/// streamed response.
-const _kCategoryLabels = {
-  PlanCategory.flight: 'Booking flights',
-  PlanCategory.lodging: 'Arranging your stay',
-  PlanCategory.food: 'Finding great places to eat',
-  PlanCategory.activity: 'Finding things to do',
-  PlanCategory.sightseeing: 'Finding sightseeing spots',
-  PlanCategory.transport: 'Planning local transport',
-  PlanCategory.shopping: 'Finding shopping spots',
-  PlanCategory.other: 'Adding final touches',
-};
-
 class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
   Place? _destination;
   DateTime? _start;
   DateTime? _end;
   String _hotelAddress = '';
+  late final TextEditingController _budget;
+  String _currency = SettingsService.instance.defaultCurrency;
+  String? _error;
 
   bool _generating = false;
   bool _done = false;
@@ -81,6 +68,7 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
   void initState() {
     super.initState();
     _destination = widget.initialDestination;
+    _budget = TextEditingController(text: moneyInput(widget.initialBudget ?? 0));
     // Generation calls Gemini, so gate it the same way the flight-code lookup
     // gates itself elsewhere in the app: online status only.
     _connSub = ConnectivityService.instance.onlineStream.listen(_setOnline);
@@ -95,6 +83,7 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
   @override
   void dispose() {
     _connSub?.cancel();
+    _budget.dispose();
     super.dispose();
   }
 
@@ -133,11 +122,10 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
     setState(() {
       _generating = true;
       _done = false;
+      _error = null;
       _progress = [_kStartLabel];
     });
 
-    // Plays the full step flow on a fixed pace since generate() is a stub
-    // right now — see _kDemoSteps above.
     final reveal = () async {
       for (final label in _kDemoSteps) {
         await Future.delayed(const Duration(milliseconds: 900));
@@ -147,16 +135,25 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
     }();
 
     final hotel = _hotelAddress.trim();
-    final aiItems = await AiItineraryService.instance.generate(
-      destination: _destination!,
-      start: _start!,
-      end: _end!,
-      hotelAddress: hotel.isEmpty ? null : hotel,
-      onProgress: (category) {
-        if (!mounted) return;
-        setState(() => _progress = [..._progress, _kCategoryLabels[category]!]);
-      },
-    );
+    final budget = parseMoney(_budget.text);
+    final List<ItineraryItem Function(String id)> aiItems;
+    try {
+      aiItems = await AiItineraryService.instance.generate(
+        destination: _destination!,
+        start: _start!,
+        end: _end!,
+        budget: budget,
+        currency: _currency,
+        hotelAddress: hotel.isEmpty ? null : hotel,
+      );
+    } on AiItineraryException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _generating = false;
+        _error = e.message;
+      });
+      return;
+    }
     await reveal;
     if (!mounted) return;
 
@@ -165,8 +162,8 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
       destination: _destination,
       startDate: _start!,
       endDate: _end!,
-      budget: 0,
-      currency: SettingsService.instance.defaultCurrency,
+      budget: budget,
+      currency: _currency,
     );
     final items = [
       if (hotel.isNotEmpty)
@@ -243,7 +240,10 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IgnorePointer(
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: SingleChildScrollView(
+                    child: IgnorePointer(
                       ignoring: _generating,
                       child: Opacity(
                         opacity: _generating ? 0.5 : 1,
@@ -304,6 +304,33 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
                               ),
                             ),
                             const SizedBox(height: 20),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('BUDGET', style: AppText.label(10)),
+                                      const SizedBox(height: 8),
+                                      MoneyField(
+                                        controller: _budget,
+                                        symbol: symbolFor(_currency),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: CurrencyDropdown(
+                                    value: _currency,
+                                    onChanged: (v) => setState(() => _currency = v),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
                             Text('HOTEL ADDRESS', style: AppText.label(10)),
                             const SizedBox(height: 8),
                             HotelAddressField(
@@ -314,11 +341,22 @@ class _AiCreateTripScreenState extends State<AiCreateTripScreen> {
                         ),
                       ),
                     ),
+                      ),
+                    ),
                     if (_generating || _done)
                       Expanded(child: _StepsRail(labels: _progress, done: _done)),
                   ],
                 ),
               ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: AppText.label(11, color: AppColors.warning),
+                  ),
+                ),
               if (!_online && !_done)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),

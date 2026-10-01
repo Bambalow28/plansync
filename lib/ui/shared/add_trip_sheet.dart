@@ -60,7 +60,6 @@ class _AddTripSheetState extends State<AddTripSheet> {
   DateTime? _end;
   late String _currency;
 
-  static const _currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'MXN'];
 
   @override
   void initState() {
@@ -236,7 +235,7 @@ class _AddTripSheetState extends State<AddTripSheet> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _CurrencyDropdown(
+              child: CurrencyDropdown(
                 value: _currency,
                 onChanged: (v) => setState(() => _currency = v),
               ),
@@ -330,10 +329,10 @@ class _Field extends StatelessWidget {
   );
 }
 
-class _CurrencyDropdown extends StatelessWidget {
+class CurrencyDropdown extends StatelessWidget {
   final String value;
   final ValueChanged<String> onChanged;
-  const _CurrencyDropdown({required this.value, required this.onChanged});
+  const CurrencyDropdown({super.key, required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +355,7 @@ class _CurrencyDropdown extends StatelessWidget {
               dropdownColor: AppColors.surfaceHigh,
               style: AppText.body(15),
               icon: Icon(Icons.expand_more_rounded, color: AppColors.textMuted),
-              items: _AddTripSheetState._currencies
+              items: SettingsService.currencies
                   .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                   .toList(),
               onChanged: (v) => onChanged(v ?? value),

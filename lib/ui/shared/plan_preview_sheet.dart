@@ -3,6 +3,7 @@ import '../../data/suggested_places.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format.dart';
 import 'add_trip_sheet.dart';
+import 'ai_create_trip_screen.dart';
 
 /// Informational sheet shown before starting a trending plan: how many days
 /// it covers, where, and roughly what it costs, with a button that carries
@@ -71,8 +72,14 @@ class PlanPreviewSheet extends StatelessWidget {
               const SizedBox(height: 24),
               GestureDetector(
                 onTap: () {
-                  Navigator.pop(context);
-                  AddTripSheet.show(context, planSource: place);
+                  final nav = Navigator.of(context);
+                  nav.pop();
+                  nav.push(MaterialPageRoute(
+                    builder: (_) => AiCreateTripScreen(
+                      initialDestination: place.toPlace(),
+                      initialBudget: place.planBudget,
+                    ),
+                  ));
                 },
                 child: Container(
                   height: 54,
@@ -82,8 +89,21 @@ class PlanPreviewSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    'Start with this plan',
+                    'Build my itinerary with AI',
                     style: AppText.body(16, color: Colors.black, weight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    AddTripSheet.show(context, planSource: place);
+                  },
+                  child: Text(
+                    'Or start with a blank outline',
+                    style: AppText.body(13, color: AppColors.textSecondary),
                   ),
                 ),
               ),
